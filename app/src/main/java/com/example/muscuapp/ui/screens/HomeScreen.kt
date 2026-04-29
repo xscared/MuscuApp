@@ -1,6 +1,9 @@
 package com.example.muscuapp.ui.screens
 
 import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
@@ -51,6 +54,24 @@ fun HomeScreen(
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
     var renameText by remember { mutableStateOf("") }
+    
+    var showSettingsMenu by remember { mutableStateOf(false) }
+
+    val exportBackupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) {
+            viewModel.exportBackup(uri) { success ->
+                Toast.makeText(context, if (success) "Sauvegarde exportée" else "Erreur d'exportation", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    val importBackupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            viewModel.importBackup(uri) { success ->
+                Toast.makeText(context, if (success) "Sauvegarde importée" else "Erreur d'importation", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -79,26 +100,56 @@ fun HomeScreen(
                     IconButton(onClick = onStatsClick) {
                         Icon(Icons.Default.BarChart, contentDescription = "Stats")
                     }
-                    TextButton(onClick = { viewModel.toggleWeightUnit() }) {
-                        Text(if (weightUnit == WeightUnit.KG) "KG" else "LBS")
-                    }
-                    IconButton(onClick = { 
-                        viewModel.exportCsv { csvData ->
-                            val intent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/csv"
-                                putExtra(Intent.EXTRA_TEXT, csvData)
-                                putExtra(Intent.EXTRA_SUBJECT, "Export MuscuApp")
-                            }
-                            context.startActivity(Intent.createChooser(intent, "Exporter mes données"))
-                        }
-                    }) {
-                        Icon(Icons.Default.Share, contentDescription = "Exporter CSV")
-                    }
                     IconButton(onClick = { showTimer = !showTimer }) {
                         Icon(
                             imageVector = if (showTimer) Icons.Default.TimerOff else Icons.Default.Timer,
                             contentDescription = "Chronomètre"
                         )
+                    }
+                    Box {
+                        IconButton(onClick = { showSettingsMenu = true }) {
+                            Icon(Icons.Default.Settings, contentDescription = "Paramètres")
+                        }
+                        DropdownMenu(
+                            expanded = showSettingsMenu,
+                            onDismissRequest = { showSettingsMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Unité : ${if (weightUnit == WeightUnit.KG) "KG" else "LBS"}") },
+                                onClick = { 
+                                    viewModel.toggleWeightUnit()
+                                    showSettingsMenu = false 
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Partager en CSV") },
+                                onClick = {
+                                    showSettingsMenu = false
+                                    viewModel.exportCsv { csvData ->
+                                        val intent = Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/csv"
+                                            putExtra(Intent.EXTRA_TEXT, csvData)
+                                            putExtra(Intent.EXTRA_SUBJECT, "Export MuscuApp")
+                                        }
+                                        context.startActivity(Intent.createChooser(intent, "Exporter mes données"))
+                                    }
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Sauvegarder les données (JSON)") },
+                                onClick = {
+                                    showSettingsMenu = false
+                                    exportBackupLauncher.launch("muscuapp_backup.json")
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Restaurer une sauvegarde (JSON)") },
+                                onClick = {
+                                    showSettingsMenu = false
+                                    importBackupLauncher.launch("application/json")
+                                }
+                            )
+                        }
                     }
                 }
             )

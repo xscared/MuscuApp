@@ -1,6 +1,7 @@
 package com.example.muscuapp.data.repository
 
 import com.example.muscuapp.data.local.*
+import com.example.muscuapp.data.backup.MuscuBackupFile
 import kotlinx.coroutines.flow.Flow
 import java.text.SimpleDateFormat
 import java.util.*
@@ -100,5 +101,25 @@ class ExerciseRepository(private val dao: ExerciseDao) {
             }
         }
         return csv.toString()
+    }
+
+    suspend fun getMuscuBackupData(): MuscuBackupFile {
+        return MuscuBackupFile(
+            sessions = dao.dumpSessions(),
+            exercises = dao.dumpExercises(),
+            sets = dao.dumpSets(),
+            templates = dao.dumpTemplates(),
+            templateExercises = dao.dumpTemplateExercises()
+        )
+    }
+
+    suspend fun restoreMuscuBackupData(backup: MuscuBackupFile) {
+        dao.restoreDatabase(
+            sessions = backup.sessions,
+            exercises = backup.exercises,
+            sets = backup.sets,
+            templates = backup.templates,
+            templateExercises = backup.templateExercises
+        )
     }
 }

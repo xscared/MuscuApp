@@ -66,4 +66,59 @@ interface ExerciseDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTemplateExercise(exercise: TemplateExerciseEntity): Long
+
+    // --- Import / Export ---
+    @Query("SELECT * FROM workout_sessions")
+    suspend fun dumpSessions(): List<WorkoutSessionEntity>
+
+    @Query("SELECT * FROM exercises")
+    suspend fun dumpExercises(): List<ExerciseEntity>
+
+    @Query("SELECT * FROM exercise_sets")
+    suspend fun dumpSets(): List<ExerciseSetEntity>
+
+    @Query("SELECT * FROM workout_templates")
+    suspend fun dumpTemplates(): List<WorkoutTemplateEntity>
+
+    @Query("SELECT * FROM template_exercises")
+    suspend fun dumpTemplateExercises(): List<TemplateExerciseEntity>
+
+    @Query("DELETE FROM workout_sessions")
+    suspend fun clearSessions()
+
+    @Query("DELETE FROM workout_templates")
+    suspend fun clearTemplates()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSessionsRaw(sessions: List<WorkoutSessionEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertExercisesRaw(exercises: List<ExerciseEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSetsRaw(sets: List<ExerciseSetEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTemplatesRaw(templates: List<WorkoutTemplateEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTemplateExercisesRaw(templateExercises: List<TemplateExerciseEntity>)
+
+    @Transaction
+    suspend fun restoreDatabase(
+        sessions: List<WorkoutSessionEntity>,
+        exercises: List<ExerciseEntity>,
+        sets: List<ExerciseSetEntity>,
+        templates: List<WorkoutTemplateEntity>,
+        templateExercises: List<TemplateExerciseEntity>
+    ) {
+        clearSessions() // Cascades exercises and sets due to ForeignKey
+        clearTemplates() // Cascades templateExercises due to ForeignKey
+        
+        insertSessionsRaw(sessions)
+        insertExercisesRaw(exercises)
+        insertSetsRaw(sets)
+        insertTemplatesRaw(templates)
+        insertTemplateExercisesRaw(templateExercises)
+    }
 }

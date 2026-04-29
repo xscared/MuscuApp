@@ -3,6 +3,7 @@ package com.example.muscuapp.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.muscuapp.data.local.*
+import com.example.muscuapp.data.backup.MuscuBackupManager
 import com.example.muscuapp.data.prefs.UserPrefs
 import com.example.muscuapp.data.prefs.WeightUnit
 import com.example.muscuapp.data.repository.ExerciseRepository
@@ -21,7 +22,8 @@ data class SetInfo(
 @HiltViewModel
 class ExerciseViewModel @Inject constructor(
     private val repository: ExerciseRepository,
-    private val userPrefs: UserPrefs
+    private val userPrefs: UserPrefs,
+    private val backupManager: MuscuBackupManager
 ) : ViewModel() {
 
     val workouts = repository.getAllWorkouts()
@@ -305,6 +307,21 @@ class ExerciseViewModel @Inject constructor(
         viewModelScope.launch {
             val data = repository.getCsvData()
             onResult(data)
+        }
+    }
+
+    // --- Import / Export ---
+    fun exportBackup(uri: android.net.Uri, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val result = backupManager.createBackup(uri)
+            onResult(result.isSuccess)
+        }
+    }
+
+    fun importBackup(uri: android.net.Uri, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val result = backupManager.restoreBackup(uri)
+            onResult(result.isSuccess)
         }
     }
 }
