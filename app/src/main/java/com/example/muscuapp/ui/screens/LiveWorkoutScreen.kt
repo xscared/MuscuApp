@@ -1,8 +1,8 @@
 package com.example.muscuapp.ui.screens
 
+import android.content.Intent
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,15 +17,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.muscuapp.data.local.ExerciseSetEntity
 import com.example.muscuapp.data.local.ExerciseWithSets
-import com.example.muscuapp.data.local.WorkoutSessionEntity
+import com.example.muscuapp.service.WorkoutTimerService
 import com.example.muscuapp.ui.viewmodel.ExerciseViewModel
 import kotlinx.coroutines.delay
 import java.util.Locale
@@ -40,27 +40,18 @@ fun LiveWorkoutScreen(
 ) {
     val workouts by viewModel.workouts.collectAsState(initial = null)
     val workout = workouts?.find { it.session.sessionId == sessionId }
+    val context = LocalContext.current
     
     var timeElapsed by remember { mutableStateOf(0L) }
-    var restTimeLeft by remember { mutableStateOf(0) }
-    var isRestTimerRunning by remember { mutableStateOf(false) }
-    
     var showFinishSummary by remember { mutableStateOf(false) }
+    
+    var showRestTimeSelector by remember { mutableStateOf(false) }
 
     LaunchedEffect(workout?.session?.startTime) {
         val startTime = workout?.session?.startTime ?: System.currentTimeMillis()
         while (workout?.session?.isLive == true) {
             timeElapsed = System.currentTimeMillis() - startTime
             delay(1000)
-        }
-    }
-
-    LaunchedEffect(isRestTimerRunning, restTimeLeft) {
-        if (isRestTimerRunning && restTimeLeft > 0) {
-            delay(1000)
-            restTimeLeft--
-        } else if (restTimeLeft == 0) {
-            isRestTimerRunning = false
         }
     }
 
@@ -92,43 +83,6 @@ fun LiveWorkoutScreen(
                     }
                 }
             )
-        },
-        bottomBar = {
-            AnimatedVisibility(
-                visible = restTimeLeft > 0,
-                enter = slideInVertically { it } + fadeIn(),
-                exit = slideOutVertically { it } + fadeOut()
-            ) {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.secondaryContainer,
-                    tonalElevation = 8.dp
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Timer, null, tint = MaterialTheme.colorScheme.secondary)
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                "REPOS : ${restTimeLeft}s",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                        }
-                        Row {
-                            IconButton(onClick = { restTimeLeft += 15 }) {
-                                Icon(Icons.Default.Add, "+15s")
-                            }
-                            TextButton(onClick = { restTimeLeft = 0 }) {
-                                Text("PASSER", fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                }
-            }
         }
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
@@ -142,8 +96,7 @@ fun LiveWorkoutScreen(
                             onToggleSet = { set, completed ->
                                 viewModel.toggleSetCompletion(set, completed)
                                 if (completed) {
-                                    restTimeLeft = 60
-                                    isRestTimerRunning = true
+                                    showRestTimeSelector = true
                                 }
                             },
                             onUpdateSet = { set ->
@@ -159,6 +112,46 @@ fun LiveWorkoutScreen(
                     }
                 }
             }
+        }
+
+        if (showRestTimeSelector) {
+            var customTime by remember { mutableStateOf("60") }
+            var isCustom by remember { mutableStateOf(false) }
+
+            AlertDialog(
+                onDismissRequest = { showRestTimeSelector = false },
+                title = { Text("Temps de repos") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (!isCustom) {
+                            Button(onClick = { startTimer(context, 60); showRestTimeSelector = false }, modifier = Modifier.fillMaxWidth()) { Text("1 min") }
+                            Button(onClick = { startTimer(context, 90); showRestTimeSelector = false }, modifier = Modifier.fillMaxWidth()) { Text("1 min 30s") }
+                            Button(onClick = { startTimer(context, 120); showRestTimeSelector = false }, modifier = Modifier.fillMaxWidth()) { Text("2 min") }
+                            OutlinedButton(onClick = { isCustom = true }, modifier = Modifier.fillMaxWidth()) { Text("Personnalisé") }
+                        } else {
+                            OutlinedTextField(
+                                value = customTime,
+                                onValueChange = { customTime = it },
+                                label = { Text("Secondes") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    if (isCustom) {
+                        Button(onClick = { 
+                            val secs = customTime.toIntOrNull() ?: 60
+                            startTimer(context, secs)
+                            showRestTimeSelector = false 
+                        }) { Text("Démarrer") }
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showRestTimeSelector = false }) { Text("Passer") }
+                }
+            )
         }
 
         if (showFinishSummary && workout != null) {
@@ -244,7 +237,6 @@ fun LiveExerciseCard(
                 Spacer(modifier = Modifier.width(48.dp))
             }
 
-            // Affichage des séries triées : échauffement d'abord, puis timestamp
             val sortedSets = exerciseWithSets.sets.sortedWith(compareBy<ExerciseSetEntity> { !it.isWarmup }.thenBy { it.timestamp })
             
             sortedSets.forEachIndexed { index, set ->
@@ -283,7 +275,6 @@ fun LiveSetRow(
             ),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Label (E ou Index)
         Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
             if (set.isWarmup) {
                 Surface(color = Color(0xFFFF9800), shape = CircleShape) {
@@ -294,7 +285,6 @@ fun LiveSetRow(
             }
         }
 
-        // Weight Input
         TextField(
             value = weightText,
             onValueChange = { 
@@ -311,7 +301,6 @@ fun LiveSetRow(
             singleLine = true
         )
 
-        // Reps Input
         TextField(
             value = repsText,
             onValueChange = { 
@@ -362,6 +351,14 @@ fun LiveSetRow(
             }
         }
     }
+}
+
+private fun startTimer(context: android.content.Context, seconds: Int) {
+    val intent = Intent(context, WorkoutTimerService::class.java).apply {
+        action = "START_TIMER"
+        putExtra("DURATION", seconds)
+    }
+    context.startForegroundService(intent)
 }
 
 fun formatElapsedTime(millis: Long): String {

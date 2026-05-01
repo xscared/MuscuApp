@@ -1,12 +1,17 @@
 package com.example.muscuapp
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.core.content.ContextCompat
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -17,13 +22,36 @@ import com.example.muscuapp.ui.screens.HomeScreen
 import com.example.muscuapp.ui.screens.WorkoutDetailScreen
 import com.example.muscuapp.ui.screens.LiveWorkoutScreen
 import com.example.muscuapp.ui.screens.StatsScreen
+import com.example.muscuapp.ui.screens.CalendarScreen
 import com.example.muscuapp.ui.theme.MuscuAppTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            // Permission granted
+        } else {
+            // Explain to the user that the feature is unavailable
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+        
         setContent {
             MuscuAppTheme {
                 Surface(
@@ -35,11 +63,18 @@ class MainActivity : ComponentActivity() {
                         composable("home") {
                             HomeScreen(
                                 onWorkoutClick = { id -> navController.navigate("detail/$id") },
-                                onStatsClick = { navController.navigate("stats") }
+                                onStatsClick = { navController.navigate("stats") },
+                                onCalendarClick = { navController.navigate("calendar") }
                             )
                         }
                         composable("stats") {
                             StatsScreen(onBack = { navController.popBackStack() })
+                        }
+                        composable("calendar") {
+                            CalendarScreen(
+                                onWorkoutClick = { id -> navController.navigate("detail/$id") },
+                                onBack = { navController.popBackStack() }
+                            )
                         }
                         composable(
                             "detail/{sessionId}",

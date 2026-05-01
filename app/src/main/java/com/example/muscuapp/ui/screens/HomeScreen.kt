@@ -36,6 +36,7 @@ import java.util.*
 fun HomeScreen(
     onWorkoutClick: (Long) -> Unit,
     onStatsClick: () -> Unit,
+    onCalendarClick: () -> Unit,
     viewModel: ExerciseViewModel = hiltViewModel()
 ) {
     val workouts by viewModel.workouts.collectAsState(initial = emptyList())
@@ -97,6 +98,9 @@ fun HomeScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onCalendarClick) {
+                        Icon(Icons.Default.CalendarMonth, contentDescription = "Calendrier")
+                    }
                     IconButton(onClick = onStatsClick) {
                         Icon(Icons.Default.BarChart, contentDescription = "Stats")
                     }
