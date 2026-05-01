@@ -9,6 +9,7 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
@@ -50,9 +51,17 @@ fun MuscuAppTheme(
         else -> LightColorScheme
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    val muscuColors = if (darkTheme) DarkMuscuColors else LightMuscuColors
+
+    CompositionLocalProvider(
+        LocalMuscuColors provides muscuColors,
+        LocalMuscuTypography provides DefaultMuscuTypography,
+        LocalMuscuSpacing provides MuscuSpacing()
+    ) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            content = content
+        )
+    }
 }

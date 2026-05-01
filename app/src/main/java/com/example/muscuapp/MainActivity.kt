@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -33,9 +34,12 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import com.example.muscuapp.service.WorkoutTimerService
+import com.example.muscuapp.ui.components.MuscuCard
 import com.example.muscuapp.ui.screens.*
+import com.example.muscuapp.ui.theme.MuscuTheme
 import com.example.muscuapp.ui.theme.MuscuAppTheme
 import dagger.hilt.android.AndroidEntryPoint
+import java.util.Locale
 import kotlin.math.roundToInt
 
 @AndroidEntryPoint
@@ -179,13 +183,8 @@ fun GlobalDraggableTimer(
         exit = fadeOut() + scaleOut()
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = if (isAlarmPlaying) MaterialTheme.colorScheme.errorContainer 
-                                    else MaterialTheme.colorScheme.primaryContainer
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
-                shape = MaterialTheme.shapes.medium,
+            MuscuCard(
+                borderColor = if (isAlarmPlaying) MuscuTheme.colors.error else Color.Transparent,
                 modifier = Modifier
                     .offset { IntOffset(currentOffsetX.roundToInt(), currentOffsetY.roundToInt()) }
                     .padding(16.dp)
@@ -195,42 +194,41 @@ fun GlobalDraggableTimer(
                             change.consume()
                             onPositionChange(currentOffsetX + dragAmount.x, currentOffsetY + dragAmount.y)
                         }
+                    },
+                onClick = {
+                    if (currentSessionId != -1L) {
+                        navController.navigate("live/$currentSessionId")
                     }
-                    .clickable {
-                        if (currentSessionId != -1L) {
-                            navController.navigate("live/$currentSessionId")
-                        }
-                    }
+                }
             ) {
                 Row(
-                    modifier = Modifier.padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Icon(
                         imageVector = if (isAlarmPlaying) Icons.Default.NotificationsActive else Icons.Default.Timer, 
                         contentDescription = null, 
-                        tint = if (isAlarmPlaying) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                        tint = if (isAlarmPlaying) MuscuTheme.colors.error else MuscuTheme.colors.primary
                     )
                     Column {
                         Text(
                             text = if (isAlarmPlaying) "FINI !" else "Repos", 
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (isAlarmPlaying) MaterialTheme.colorScheme.error else Color.Unspecified
+                            style = MuscuTheme.typography.labelSmall,
+                            color = if (isAlarmPlaying) MuscuTheme.colors.error else MuscuTheme.colors.textSecondary
                         )
                         if (!isAlarmPlaying) {
                             Text(
-                                String.format("%02d:%02d", timerSeconds / 60, timerSeconds % 60),
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
+                                String.format(Locale.getDefault(), "%02d:%02d", timerSeconds / 60, timerSeconds % 60),
+                                style = MuscuTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MuscuTheme.colors.primary
                             )
                         } else {
                             Text(
                                 "STOP",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.error
+                                style = MuscuTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MuscuTheme.colors.error
                             )
                         }
                     }
@@ -245,7 +243,7 @@ fun GlobalDraggableTimer(
                             imageVector = Icons.Default.Close, 
                             contentDescription = "Arrêter", 
                             modifier = Modifier.size(20.dp),
-                            tint = if (isAlarmPlaying) MaterialTheme.colorScheme.error else Color.Unspecified
+                            tint = if (isAlarmPlaying) MuscuTheme.colors.error else MuscuTheme.colors.textPrimary
                         )
                     }
                 }
