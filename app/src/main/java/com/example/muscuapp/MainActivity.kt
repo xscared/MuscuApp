@@ -17,6 +17,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
 import com.example.muscuapp.ui.screens.AddExerciseScreen
 import com.example.muscuapp.ui.screens.HomeScreen
 import com.example.muscuapp.ui.screens.WorkoutDetailScreen
@@ -91,7 +92,8 @@ class MainActivity : ComponentActivity() {
                         }
                         composable(
                             "live/{sessionId}",
-                            arguments = listOf(navArgument("sessionId") { type = NavType.LongType })
+                            arguments = listOf(navArgument("sessionId") { type = NavType.LongType }),
+                            deepLinks = listOf(navDeepLink { uriPattern = "muscuapp://live/{sessionId}" })
                         ) { backStackEntry ->
                             val sessionId = backStackEntry.arguments?.getLong("sessionId") ?: 0L
                             LiveWorkoutScreen(

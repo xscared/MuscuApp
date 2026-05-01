@@ -5,10 +5,6 @@ plugins {
     id("com.google.dagger.hilt.android")
 }
 
-kotlin {
-    jvmToolchain(21)
-}
-
 android {
     namespace = "com.example.muscuapp"
     compileSdk {
@@ -37,8 +33,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
     buildFeatures {
         compose = true

@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.muscuapp.data.local.ExerciseSetEntity
 import com.example.muscuapp.data.local.ExerciseWithSets
@@ -54,6 +55,9 @@ fun LiveWorkoutScreen(
             delay(1000)
         }
     }
+
+    val timerSeconds = WorkoutTimerService.currentTimerSeconds.intValue
+    val isTimerRunning = WorkoutTimerService.isTimerRunning.value
 
     Scaffold(
         topBar = {
@@ -89,7 +93,7 @@ fun LiveWorkoutScreen(
             if (workout == null) {
                 CircularProgressIndicator(Modifier.align(Alignment.Center))
             } else {
-                LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 80.dp)) {
+                LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 120.dp)) {
                     items(workout.exercises.sortedBy { it.exercise.order }) { exerciseWithSets ->
                         LiveExerciseCard(
                             exerciseWithSets = exerciseWithSets,
@@ -112,6 +116,42 @@ fun LiveWorkoutScreen(
                     }
                 }
             }
+
+            // --- COMPTEUR DANS L'APPLICATION ---
+            AnimatedVisibility(
+                visible = isTimerRunning,
+                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+                modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp)
+            ) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Icon(Icons.Default.Timer, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Column {
+                            Text("Temps de repos", style = MaterialTheme.typography.labelSmall)
+                            Text(
+                                String.format("%02d:%02d", timerSeconds / 60, timerSeconds % 60),
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        IconButton(onClick = { 
+                            context.startService(Intent(context, WorkoutTimerService::class.java).apply { action = "CANCEL_TIMER" })
+                        }) {
+                            Icon(Icons.Default.Close, contentDescription = "Annuler")
+                        }
+                    }
+                }
+            }
         }
 
         if (showRestTimeSelector) {
@@ -124,9 +164,9 @@ fun LiveWorkoutScreen(
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (!isCustom) {
-                            Button(onClick = { startTimer(context, 60); showRestTimeSelector = false }, modifier = Modifier.fillMaxWidth()) { Text("1 min") }
-                            Button(onClick = { startTimer(context, 90); showRestTimeSelector = false }, modifier = Modifier.fillMaxWidth()) { Text("1 min 30s") }
-                            Button(onClick = { startTimer(context, 120); showRestTimeSelector = false }, modifier = Modifier.fillMaxWidth()) { Text("2 min") }
+                            Button(onClick = { startTimer(context, 60, sessionId); showRestTimeSelector = false }, modifier = Modifier.fillMaxWidth()) { Text("1 min") }
+                            Button(onClick = { startTimer(context, 90, sessionId); showRestTimeSelector = false }, modifier = Modifier.fillMaxWidth()) { Text("1 min 30s") }
+                            Button(onClick = { startTimer(context, 120, sessionId); showRestTimeSelector = false }, modifier = Modifier.fillMaxWidth()) { Text("2 min") }
                             OutlinedButton(onClick = { isCustom = true }, modifier = Modifier.fillMaxWidth()) { Text("Personnalisé") }
                         } else {
                             OutlinedTextField(
@@ -143,7 +183,7 @@ fun LiveWorkoutScreen(
                     if (isCustom) {
                         Button(onClick = { 
                             val secs = customTime.toIntOrNull() ?: 60
-                            startTimer(context, secs)
+                            startTimer(context, secs, sessionId)
                             showRestTimeSelector = false 
                         }) { Text("Démarrer") }
                     }
@@ -353,12 +393,13 @@ fun LiveSetRow(
     }
 }
 
-private fun startTimer(context: android.content.Context, seconds: Int) {
+private fun startTimer(context: android.content.Context, seconds: Int, sessionId: Long) {
     val intent = Intent(context, WorkoutTimerService::class.java).apply {
         action = "START_TIMER"
         putExtra("DURATION", seconds)
+        putExtra("SESSION_ID", sessionId)
     }
-    context.startForegroundService(intent)
+    ContextCompat.startForegroundService(context, intent)
 }
 
 fun formatElapsedTime(millis: Long): String {

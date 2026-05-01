@@ -40,6 +40,25 @@ interface ExerciseDao {
     @Update
     suspend fun updateExercise(exercise: ExerciseEntity)
 
+    @Query("SELECT name FROM exercises WHERE id = :exerciseId")
+    suspend fun getExerciseNameById(exerciseId: Long): String?
+
+    @Query("UPDATE exercises SET weight = :weight, reps = :reps WHERE name = :name")
+    suspend fun syncExerciseDataByName(name: String, weight: Float, reps: Int)
+
+    @Query("UPDATE exercises SET weight = :weight, reps = :reps, sets = :sets WHERE name = :name")
+    suspend fun syncExerciseAllDataByName(name: String, weight: Float, reps: Int, sets: Int)
+
+    @Query("UPDATE exercise_sets SET weight = :weight, reps = :reps WHERE exerciseId IN (SELECT id FROM exercises WHERE name = :name)")
+    suspend fun syncSetsByExerciseName(name: String, weight: Float, reps: Int)
+
+    @Transaction
+    suspend fun updateExerciseWithSync(exercise: ExerciseEntity) {
+        updateExercise(exercise)
+        syncExerciseAllDataByName(exercise.name, exercise.weight, exercise.reps, exercise.sets)
+        syncSetsByExerciseName(exercise.name, exercise.weight, exercise.reps)
+    }
+
     @Query("SELECT MAX(weight) FROM exercises WHERE name = :name")
     suspend fun getPersonalRecord(name: String): Float?
 
@@ -49,6 +68,16 @@ interface ExerciseDao {
 
     @Update
     suspend fun updateSet(set: ExerciseSetEntity)
+
+    @Transaction
+    suspend fun updateSetWithSync(set: ExerciseSetEntity) {
+        updateSet(set)
+        val name = getExerciseNameById(set.exerciseId)
+        if (name != null) {
+            syncExerciseDataByName(name, set.weight, set.reps)
+            syncSetsByExerciseName(name, set.weight, set.reps)
+        }
+    }
 
     @Delete
     suspend fun deleteSet(set: ExerciseSetEntity)
