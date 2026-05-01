@@ -16,10 +16,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -56,9 +60,6 @@ fun LiveWorkoutScreen(
         }
     }
 
-    val timerSeconds = WorkoutTimerService.currentTimerSeconds.intValue
-    val isTimerRunning = WorkoutTimerService.isTimerRunning.value
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -93,7 +94,7 @@ fun LiveWorkoutScreen(
             if (workout == null) {
                 CircularProgressIndicator(Modifier.align(Alignment.Center))
             } else {
-                LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 120.dp)) {
+                LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 80.dp)) {
                     items(workout.exercises.sortedBy { it.exercise.order }) { exerciseWithSets ->
                         LiveExerciseCard(
                             exerciseWithSets = exerciseWithSets,
@@ -116,47 +117,12 @@ fun LiveWorkoutScreen(
                     }
                 }
             }
-
-            // --- COMPTEUR DANS L'APPLICATION ---
-            AnimatedVisibility(
-                visible = isTimerRunning,
-                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
-                modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp)
-            ) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-                    shape = MaterialTheme.shapes.medium
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Icon(Icons.Default.Timer, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        Column {
-                            Text("Temps de repos", style = MaterialTheme.typography.labelSmall)
-                            Text(
-                                String.format("%02d:%02d", timerSeconds / 60, timerSeconds % 60),
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        IconButton(onClick = { 
-                            context.startService(Intent(context, WorkoutTimerService::class.java).apply { action = "CANCEL_TIMER" })
-                        }) {
-                            Icon(Icons.Default.Close, contentDescription = "Annuler")
-                        }
-                    }
-                }
-            }
         }
 
         if (showRestTimeSelector) {
-            var customTime by remember { mutableStateOf("60") }
+            var customTime by remember { mutableStateOf(TextFieldValue("60", selection = TextRange(0, 2))) }
             var isCustom by remember { mutableStateOf(false) }
+            val focusRequester = remember { FocusRequester() }
 
             AlertDialog(
                 onDismissRequest = { showRestTimeSelector = false },
@@ -167,22 +133,34 @@ fun LiveWorkoutScreen(
                             Button(onClick = { startTimer(context, 60, sessionId); showRestTimeSelector = false }, modifier = Modifier.fillMaxWidth()) { Text("1 min") }
                             Button(onClick = { startTimer(context, 90, sessionId); showRestTimeSelector = false }, modifier = Modifier.fillMaxWidth()) { Text("1 min 30s") }
                             Button(onClick = { startTimer(context, 120, sessionId); showRestTimeSelector = false }, modifier = Modifier.fillMaxWidth()) { Text("2 min") }
-                            OutlinedButton(onClick = { isCustom = true }, modifier = Modifier.fillMaxWidth()) { Text("Personnalisé") }
+                            OutlinedButton(
+                                onClick = { isCustom = true }, 
+                                modifier = Modifier.fillMaxWidth()
+                            ) { 
+                                Text("Personnalisé")
+                            }
                         } else {
                             OutlinedTextField(
                                 value = customTime,
                                 onValueChange = { customTime = it },
                                 label = { Text("Secondes") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .focusRequester(focusRequester),
+                                singleLine = true
                             )
+                            
+                            LaunchedEffect(Unit) {
+                                focusRequester.requestFocus()
+                            }
                         }
                     }
                 },
                 confirmButton = {
                     if (isCustom) {
                         Button(onClick = { 
-                            val secs = customTime.toIntOrNull() ?: 60
+                            val secs = customTime.text.toIntOrNull() ?: 60
                             startTimer(context, secs, sessionId)
                             showRestTimeSelector = false 
                         }) { Text("Démarrer") }

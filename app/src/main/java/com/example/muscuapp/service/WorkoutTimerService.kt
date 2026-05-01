@@ -10,6 +10,7 @@ import android.media.RingtoneManager
 import android.net.Uri
 import android.os.*
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.app.NotificationCompat
 import com.example.muscuapp.MainActivity
@@ -22,11 +23,12 @@ class WorkoutTimerService : Service() {
     companion object {
         val currentTimerSeconds = mutableIntStateOf(0)
         val isTimerRunning = mutableStateOf(false)
+        val isAlarmPlaying = mutableStateOf(false)
+        val currentSessionId = mutableLongStateOf(-1L)
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var timerJob: Job? = null
-    private var currentSessionId: Long = -1
 
     private var ringtone: Ringtone? = null
     private val CHANNEL_ID = "workout_timer_channel"
@@ -53,7 +55,7 @@ class WorkoutTimerService : Service() {
         when (intent?.action) {
             "START_TIMER" -> {
                 val durationSeconds = intent.getIntExtra("DURATION", 60)
-                currentSessionId = intent.getLongExtra("SESSION_ID", -1)
+                currentSessionId.longValue = intent.getLongExtra("SESSION_ID", -1)
                 startTimer(durationSeconds)
             }
             "STOP_ALARM" -> {
@@ -104,7 +106,7 @@ class WorkoutTimerService : Service() {
 
         val intent = Intent(
             Intent.ACTION_VIEW,
-            Uri.parse("muscuapp://live/$currentSessionId"),
+            Uri.parse("muscuapp://live/${currentSessionId.longValue}"),
             this,
             MainActivity::class.java
         )
@@ -129,6 +131,7 @@ class WorkoutTimerService : Service() {
     }
 
     private fun playAlarm() {
+        isAlarmPlaying.value = true
         val alarmUri: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
             ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
 
@@ -141,7 +144,7 @@ class WorkoutTimerService : Service() {
 
         val intent = Intent(
             Intent.ACTION_VIEW,
-            Uri.parse("muscuapp://live/$currentSessionId"),
+            Uri.parse("muscuapp://live/${currentSessionId.longValue}"),
             this,
             MainActivity::class.java
         )
@@ -178,6 +181,7 @@ class WorkoutTimerService : Service() {
     }
 
     private fun clearAlarm() {
+        isAlarmPlaying.value = false
         ringtone?.stop()
         ringtone = null
         val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {

@@ -104,12 +104,6 @@ fun HomeScreen(
                     IconButton(onClick = onStatsClick) {
                         Icon(Icons.Default.BarChart, contentDescription = "Stats")
                     }
-                    IconButton(onClick = { showTimer = !showTimer }) {
-                        Icon(
-                            imageVector = if (showTimer) Icons.Default.TimerOff else Icons.Default.Timer,
-                            contentDescription = "Chronomètre"
-                        )
-                    }
                     Box {
                         IconButton(onClick = { showSettingsMenu = true }) {
                             Icon(Icons.Default.Settings, contentDescription = "Paramètres")
@@ -171,9 +165,7 @@ fun HomeScreen(
             }
         }
     ) { paddingValues ->
-        Column(modifier = Modifier.padding(paddingValues)) {
-            AnimatedVisibility(visible = showTimer) { RestTimer() }
-
+        Column(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
             if (workouts.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("Aucune séance.\nAppuyez sur + pour commencer.", textAlign = androidx.compose.ui.text.style.TextAlign.Center)
@@ -366,36 +358,5 @@ fun WorkoutItem(workout: WorkoutWithExercisesAndSets, onClick: () -> Unit, onLon
 
 @Composable
 fun RestTimer() {
-    var timeLeft by remember { mutableStateOf(60) }
-    var isRunning by remember { mutableStateOf(false) }
-
-    LaunchedEffect(isRunning, timeLeft) {
-        if (isRunning && timeLeft > 0) {
-            delay(1000L)
-            timeLeft -= 1
-        } else if (timeLeft == 0) {
-            isRunning = false
-        }
-    }
-
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-    ) {
-        Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Repos", style = MaterialTheme.typography.labelLarge)
-            Text(
-                text = String.format(Locale.US, "%02d:%02d", timeLeft / 60, timeLeft % 60),
-                style = MaterialTheme.typography.displayMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { isRunning = !isRunning }, modifier = Modifier.width(120.dp)) {
-                    Text(if (isRunning) "Pause" else "Démarrer")
-                }
-                OutlinedButton(onClick = { timeLeft = 60; isRunning = false }) { Text("60s") }
-                OutlinedButton(onClick = { timeLeft = 90; isRunning = false }) { Text("90s") }
-            }
-        }
-    }
+    // Cette fonction n'est plus utilisée car on utilise le WorkoutTimerService global
 }

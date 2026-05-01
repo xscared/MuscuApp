@@ -7,28 +7,42 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import android.content.Intent
+import androidx.compose.animation.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.navigation.NavController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
-import com.example.muscuapp.ui.screens.AddExerciseScreen
-import com.example.muscuapp.ui.screens.HomeScreen
-import com.example.muscuapp.ui.screens.WorkoutDetailScreen
-import com.example.muscuapp.ui.screens.LiveWorkoutScreen
-import com.example.muscuapp.ui.screens.StatsScreen
-import com.example.muscuapp.ui.screens.CalendarScreen
+import com.example.muscuapp.service.WorkoutTimerService
+import com.example.muscuapp.ui.screens.*
 import com.example.muscuapp.ui.theme.MuscuAppTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlin.math.roundToInt
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    private var offsetX by mutableFloatStateOf(0f)
+    private var offsetY by mutableFloatStateOf(0f)
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -60,72 +74,179 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
-                    NavHost(navController = navController, startDestination = "home") {
-                        composable("home") {
-                            HomeScreen(
-                                onWorkoutClick = { id -> navController.navigate("detail/$id") },
-                                onStatsClick = { navController.navigate("stats") },
-                                onCalendarClick = { navController.navigate("calendar") }
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        NavHost(navController = navController, startDestination = "home") {
+                            composable("home") {
+                                HomeScreen(
+                                    onWorkoutClick = { id -> navController.navigate("detail/$id") },
+                                    onStatsClick = { navController.navigate("stats") },
+                                    onCalendarClick = { navController.navigate("calendar") }
+                                )
+                            }
+                            composable("stats") {
+                                StatsScreen(onBack = { navController.popBackStack() })
+                            }
+                            composable("calendar") {
+                                CalendarScreen(
+                                    onWorkoutClick = { id -> navController.navigate("detail/$id") },
+                                    onBack = { navController.popBackStack() }
+                                )
+                            }
+                            composable(
+                                "detail/{sessionId}",
+                                arguments = listOf(navArgument("sessionId") { type = NavType.LongType })
+                            ) { backStackEntry ->
+                                val sessionId = backStackEntry.arguments?.getLong("sessionId") ?: 0L
+                                WorkoutDetailScreen(
+                                    sessionId = sessionId,
+                                    onAddExercise = { id -> navController.navigate("add/$id") },
+                                    onEditExercise = { sid, eid -> navController.navigate("edit/$sid/$eid") },
+                                    onLiveClick = { id -> navController.navigate("live/$id") },
+                                    onBack = { navController.popBackStack() }
+                                )
+                            }
+                            composable(
+                                "live/{sessionId}",
+                                arguments = listOf(navArgument("sessionId") { type = NavType.LongType }),
+                                deepLinks = listOf(navDeepLink { uriPattern = "muscuapp://live/{sessionId}" })
+                            ) { backStackEntry ->
+                                val sessionId = backStackEntry.arguments?.getLong("sessionId") ?: 0L
+                                LiveWorkoutScreen(
+                                    sessionId = sessionId,
+                                    onBack = { navController.popBackStack() }
+                                )
+                            }
+                            composable(
+                                "add/{sessionId}",
+                                arguments = listOf(navArgument("sessionId") { type = NavType.LongType })
+                            ) { backStackEntry ->
+                                val sessionId = backStackEntry.arguments?.getLong("sessionId") ?: 0L
+                                AddExerciseScreen(
+                                    sessionId = sessionId,
+                                    onNavigateBack = { navController.popBackStack() }
+                                )
+                            }
+                            composable(
+                                "edit/{sessionId}/{exerciseId}",
+                                arguments = listOf(
+                                    navArgument("sessionId") { type = NavType.LongType },
+                                    navArgument("exerciseId") { type = NavType.LongType }
+                                )
+                            ) { backStackEntry ->
+                                val sessionId = backStackEntry.arguments?.getLong("sessionId") ?: 0L
+                                val exerciseId = backStackEntry.arguments?.getLong("exerciseId") ?: 0L
+                                AddExerciseScreen(
+                                    sessionId = sessionId,
+                                    exerciseId = exerciseId,
+                                    onNavigateBack = { navController.popBackStack() }
+                                )
+                            }
+                        }
+
+                        // --- COMPTEUR GLOBAL DRAGGABLE ---
+                        GlobalDraggableTimer(
+                            navController = navController,
+                            currentOffsetX = offsetX,
+                            currentOffsetY = offsetY,
+                            onPositionChange = { x, y ->
+                                offsetX = x
+                                offsetY = y
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun GlobalDraggableTimer(
+    navController: NavController,
+    currentOffsetX: Float,
+    currentOffsetY: Float,
+    onPositionChange: (Float, Float) -> Unit
+) {
+    val isTimerRunning = WorkoutTimerService.isTimerRunning.value
+    val isAlarmPlaying = WorkoutTimerService.isAlarmPlaying.value
+    val timerSeconds = WorkoutTimerService.currentTimerSeconds.intValue
+    val currentSessionId = WorkoutTimerService.currentSessionId.longValue
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    AnimatedVisibility(
+        visible = isTimerRunning || isAlarmPlaying,
+        enter = fadeIn() + scaleIn(),
+        exit = fadeOut() + scaleOut()
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isAlarmPlaying) MaterialTheme.colorScheme.errorContainer 
+                                    else MaterialTheme.colorScheme.primaryContainer
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
+                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier
+                    .offset { IntOffset(currentOffsetX.roundToInt(), currentOffsetY.roundToInt()) }
+                    .padding(16.dp)
+                    .align(Alignment.BottomCenter)
+                    .pointerInput(Unit) {
+                        detectDragGestures { change, dragAmount ->
+                            change.consume()
+                            onPositionChange(currentOffsetX + dragAmount.x, currentOffsetY + dragAmount.y)
+                        }
+                    }
+                    .clickable {
+                        if (currentSessionId != -1L) {
+                            navController.navigate("live/$currentSessionId")
+                        }
+                    }
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isAlarmPlaying) Icons.Default.NotificationsActive else Icons.Default.Timer, 
+                        contentDescription = null, 
+                        tint = if (isAlarmPlaying) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                    )
+                    Column {
+                        Text(
+                            text = if (isAlarmPlaying) "FINI !" else "Repos", 
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (isAlarmPlaying) MaterialTheme.colorScheme.error else Color.Unspecified
+                        )
+                        if (!isAlarmPlaying) {
+                            Text(
+                                String.format("%02d:%02d", timerSeconds / 60, timerSeconds % 60),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        } else {
+                            Text(
+                                "STOP",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.error
                             )
                         }
-                        composable("stats") {
-                            StatsScreen(onBack = { navController.popBackStack() })
-                        }
-                        composable("calendar") {
-                            CalendarScreen(
-                                onWorkoutClick = { id -> navController.navigate("detail/$id") },
-                                onBack = { navController.popBackStack() }
-                            )
-                        }
-                        composable(
-                            "detail/{sessionId}",
-                            arguments = listOf(navArgument("sessionId") { type = NavType.LongType })
-                        ) { backStackEntry ->
-                            val sessionId = backStackEntry.arguments?.getLong("sessionId") ?: 0L
-                            WorkoutDetailScreen(
-                                sessionId = sessionId,
-                                onAddExercise = { id -> navController.navigate("add/$id") },
-                                onEditExercise = { sid, eid -> navController.navigate("edit/$sid/$eid") },
-                                onLiveClick = { id -> navController.navigate("live/$id") },
-                                onBack = { navController.popBackStack() }
-                            )
-                        }
-                        composable(
-                            "live/{sessionId}",
-                            arguments = listOf(navArgument("sessionId") { type = NavType.LongType }),
-                            deepLinks = listOf(navDeepLink { uriPattern = "muscuapp://live/{sessionId}" })
-                        ) { backStackEntry ->
-                            val sessionId = backStackEntry.arguments?.getLong("sessionId") ?: 0L
-                            LiveWorkoutScreen(
-                                sessionId = sessionId,
-                                onBack = { navController.popBackStack() }
-                            )
-                        }
-                        composable(
-                            "add/{sessionId}",
-                            arguments = listOf(navArgument("sessionId") { type = NavType.LongType })
-                        ) { backStackEntry ->
-                            val sessionId = backStackEntry.arguments?.getLong("sessionId") ?: 0L
-                            AddExerciseScreen(
-                                sessionId = sessionId,
-                                onNavigateBack = { navController.popBackStack() }
-                            )
-                        }
-                        composable(
-                            "edit/{sessionId}/{exerciseId}",
-                            arguments = listOf(
-                                navArgument("sessionId") { type = NavType.LongType },
-                                navArgument("exerciseId") { type = NavType.LongType }
-                            )
-                        ) { backStackEntry ->
-                            val sessionId = backStackEntry.arguments?.getLong("sessionId") ?: 0L
-                            val exerciseId = backStackEntry.arguments?.getLong("exerciseId") ?: 0L
-                            AddExerciseScreen(
-                                sessionId = sessionId,
-                                exerciseId = exerciseId,
-                                onNavigateBack = { navController.popBackStack() }
-                            )
-                        }
+                    }
+                    IconButton(
+                        onClick = { 
+                            val action = if (isAlarmPlaying) "STOP_ALARM" else "CANCEL_TIMER"
+                            context.startService(Intent(context, WorkoutTimerService::class.java).apply { this.action = action })
+                        },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close, 
+                            contentDescription = "Arrêter", 
+                            modifier = Modifier.size(20.dp),
+                            tint = if (isAlarmPlaying) MaterialTheme.colorScheme.error else Color.Unspecified
+                        )
                     }
                 }
             }
