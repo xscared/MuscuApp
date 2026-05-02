@@ -4,8 +4,8 @@ import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -13,9 +13,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.muscuapp.data.local.WorkoutSessionEntity
 import com.example.muscuapp.data.prefs.WeightUnit
@@ -62,15 +65,7 @@ fun HomeScreen(
     MuscuScreen(
         title = "Mes Séances",
         actions = {
-            IconButton(onClick = onCalendarClick) {
-                Icon(Icons.Default.CalendarMonth, contentDescription = "Calendrier", tint = MuscuTheme.colors.textPrimary)
-            }
-            IconButton(onClick = onStatsClick) {
-                Icon(Icons.Default.BarChart, contentDescription = "Stats", tint = MuscuTheme.colors.textPrimary)
-            }
-            IconButton(onClick = { showSettingsSheet = true }) {
-                Icon(Icons.Default.Settings, contentDescription = "Paramètres", tint = MuscuTheme.colors.textPrimary)
-            }
+            // Plus d'icônes en haut à droite ici
         },
         bottomBar = {
             Row(
@@ -88,14 +83,48 @@ fun HomeScreen(
             }
         }
     ) {
+        // --- DASHBOARD DE NAVIGATION ---
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = MuscuTheme.spacing.medium)
+                    .padding(bottom = MuscuTheme.spacing.large),
+                horizontalArrangement = Arrangement.spacedBy(MuscuTheme.spacing.small)
+            ) {
+                NavDashboardItem(
+                    label = "STATS",
+                    icon = Icons.Default.BarChart,
+                    color = MuscuTheme.colors.primary,
+                    modifier = Modifier.weight(1f),
+                    onClick = onStatsClick
+                )
+                NavDashboardItem(
+                    label = "DATES",
+                    icon = Icons.Default.CalendarMonth,
+                    color = MuscuTheme.colors.secondary,
+                    modifier = Modifier.weight(1f),
+                    onClick = onCalendarClick
+                )
+                NavDashboardItem(
+                    label = "SETUP",
+                    icon = Icons.Default.Settings,
+                    color = MuscuTheme.colors.textSecondary,
+                    modifier = Modifier.weight(1f),
+                    onClick = { showSettingsSheet = true }
+                )
+            }
+        }
+
         if (workouts.isEmpty()) {
             item {
-                Box(modifier = Modifier.fillParentMaxHeight(0.7f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.fillParentMaxHeight(0.6f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Text(
-                        text = "Aucune séance.\nAppuyez sur + pour commencer.", 
+                        text = "AUCUNE SÉANCE.\nDÉMARRE MAINTENANT.", 
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                         color = MuscuTheme.colors.textSecondary,
-                        style = MuscuTheme.typography.bodyLarge
+                        style = MuscuTheme.typography.titleMedium,
+                        letterSpacing = 2.sp
                     )
                 }
             }
@@ -169,19 +198,20 @@ fun HomeScreen(
         )
     }
 
-    // Dialogs remain for input fields, but using our custom interaction logic
     if (showAddDialog) {
         AlertDialog(
             onDismissRequest = { showAddDialog = false },
-            title = { Text("Nouvelle Séance", style = MuscuTheme.typography.titleMedium) },
+            title = { Text("NOUVELLE SÉANCE", style = MuscuTheme.typography.titleMedium) },
             text = {
                 OutlinedTextField(
                     value = newWorkoutTitle,
                     onValueChange = { newWorkoutTitle = it },
-                    label = { Text("Nom de la séance") },
+                    label = { Text("NOM DE LA SÉANCE") },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MuscuTheme.colors.primary,
-                        unfocusedBorderColor = MuscuTheme.colors.divider
+                        unfocusedBorderColor = MuscuTheme.colors.divider,
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent
                     )
                 )
             },
@@ -196,30 +226,46 @@ fun HomeScreen(
                             newWorkoutTitle = ""
                         }
                     }
-                ) { Text("CRÉER", color = MuscuTheme.colors.primary, fontWeight = FontWeight.Bold) }
+                ) { Text("CRÉER", color = MuscuTheme.colors.primary, fontWeight = FontWeight.Black) }
             },
             dismissButton = {
                 TextButton(onClick = { showAddDialog = false }) { Text("ANNULER", color = MuscuTheme.colors.textSecondary) }
             }
         )
     }
+}
 
-    if (showTemplateDialog) {
-        MuscuActionSheet(
-            visible = showTemplateDialog,
-            onDismiss = { showTemplateDialog = false },
-            title = "Démarrer un modèle"
-        ) {
-            templates.forEach { template ->
-                MuscuActionItem(
-                    label = template.template.name,
-                    icon = Icons.Default.ContentPaste,
-                    onClick = {
-                        viewModel.createWorkoutFromTemplate(template)
-                        showTemplateDialog = false
-                    }
-                )
-            }
+@Composable
+fun NavDashboardItem(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    color: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .height(100.dp)
+            .clip(SquircleShape(n = 3.0f))
+            .background(MuscuTheme.colors.surfaceVariant)
+            .muscuClickable(onClick = onClick)
+            .padding(MuscuTheme.spacing.medium),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = color,
+                modifier = Modifier.size(28.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = label,
+                style = MuscuTheme.typography.labelSmall,
+                color = MuscuTheme.colors.textPrimary,
+                letterSpacing = 1.sp
+            )
         }
     }
 }

@@ -1,7 +1,6 @@
 package com.example.muscuapp.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -25,11 +24,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.muscuapp.data.local.WorkoutWithExercisesAndSets
+import com.example.muscuapp.ui.components.*
+import com.example.muscuapp.ui.theme.MuscuTheme
 import com.example.muscuapp.ui.viewmodel.ExerciseViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalendarScreen(
     onWorkoutClick: (Long) -> Unit,
@@ -64,187 +64,183 @@ fun CalendarScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Calendrier") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Retour")
-                    }
-                }
-            )
-        }
-    ) { paddingValues ->
-        Column(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
-            // Month Selector
+    MuscuScreen(
+        title = "Calendrier",
+        navigationIcon = Icons.AutoMirrored.Filled.ArrowBack,
+        onNavigationClick = onBack
+    ) {
+        // Sélecteur de mois personnalisé
+        item {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = {
-                    val newCal = currentMonth.clone() as Calendar
-                    newCal.add(Calendar.MONTH, -1)
-                    currentMonth = newCal
-                }) {
-                    Icon(Icons.Default.ChevronLeft, "Précédent")
+                IconButton(
+                    onClick = {
+                        val newCal = currentMonth.clone() as Calendar
+                        newCal.add(Calendar.MONTH, -1)
+                        currentMonth = newCal
+                    },
+                    modifier = Modifier.background(MuscuTheme.colors.surfaceVariant, SquircleShape(3f))
+                ) {
+                    Icon(Icons.Default.ChevronLeft, null, tint = MuscuTheme.colors.textPrimary)
                 }
+                
                 Text(
-                    text = monthFormatter.format(currentMonth.time).replaceFirstChar { it.uppercase() },
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    text = monthFormatter.format(currentMonth.time).uppercase(),
+                    style = MuscuTheme.typography.titleMedium,
+                    color = MuscuTheme.colors.primary,
+                    fontWeight = FontWeight.Black
                 )
-                IconButton(onClick = {
-                    val newCal = currentMonth.clone() as Calendar
-                    newCal.add(Calendar.MONTH, 1)
-                    currentMonth = newCal
-                }) {
-                    Icon(Icons.Default.ChevronRight, "Suivant")
+                
+                IconButton(
+                    onClick = {
+                        val newCal = currentMonth.clone() as Calendar
+                        newCal.add(Calendar.MONTH, 1)
+                        currentMonth = newCal
+                    },
+                    modifier = Modifier.background(MuscuTheme.colors.surfaceVariant, SquircleShape(3f))
+                ) {
+                    Icon(Icons.Default.ChevronRight, null, tint = MuscuTheme.colors.textPrimary)
                 }
             }
+        }
 
-            // Days of week header
-            val daysOfWeek = listOf("Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim")
-            Row(Modifier.fillMaxWidth()) {
+        // En-tête des jours
+        item {
+            val daysOfWeek = listOf("LUN", "MAR", "MER", "JEU", "VEN", "SAM", "DIM")
+            Row(Modifier.fillMaxWidth().padding(vertical = 16.dp)) {
                 daysOfWeek.forEach { day ->
                     Text(
                         text = day,
                         modifier = Modifier.weight(1f),
                         textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.outline
+                        style = MuscuTheme.typography.labelSmall,
+                        color = MuscuTheme.colors.textSecondary
                     )
                 }
             }
+        }
 
-            // Calendar Grid
+        // Grille du Calendrier
+        item {
             val days = getDaysInMonth(currentMonth)
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(7),
-                modifier = Modifier.fillMaxWidth().height(300.dp).padding(8.dp)
-            ) {
-                items(days) { date ->
-                    if (date == null) {
-                        Box(Modifier.aspectRatio(1f))
-                    } else {
-                        val isSelected = isSameDay(date, selectedDate)
-                        val hasWorkout = workoutDays.contains(getStartOfDay(date).timeInMillis)
-                        val isToday = isSameDay(date, Calendar.getInstance())
+            Box(modifier = Modifier.height(320.dp).fillMaxWidth().padding(horizontal = 8.dp)) {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(7),
+                    modifier = Modifier.fillMaxSize(),
+                    userScrollEnabled = false
+                ) {
+                    items(days) { date ->
+                        if (date == null) {
+                            Box(Modifier.aspectRatio(1f))
+                        } else {
+                            val isSelected = isSameDay(date, selectedDate)
+                            val hasWorkout = workoutDays.contains(getStartOfDay(date).timeInMillis)
+                            val isToday = isSameDay(date, Calendar.getInstance())
 
-                        Box(
-                            modifier = Modifier
-                                .aspectRatio(1f)
-                                .padding(4.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    when {
-                                        isSelected -> MaterialTheme.colorScheme.primary
-                                        isToday -> MaterialTheme.colorScheme.primaryContainer
-                                        else -> Color.Transparent
-                                    }
-                                )
-                                .clickable { selectedDate = date },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text = date.get(Calendar.DAY_OF_MONTH).toString(),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                                    fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Normal
-                                )
-                                if (hasWorkout) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(4.dp)
-                                            .clip(CircleShape)
-                                            .background(if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary)
+                            Box(
+                                modifier = Modifier
+                                    .aspectRatio(1f)
+                                    .padding(4.dp)
+                                    .clip(SquircleShape(n = 2.5f))
+                                    .background(
+                                        when {
+                                            isSelected -> MuscuTheme.colors.primary
+                                            isToday -> MuscuTheme.colors.surfaceVariant
+                                            else -> Color.Transparent
+                                        }
                                     )
+                                    .muscuClickable { selectedDate = date },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        text = date.get(Calendar.DAY_OF_MONTH).toString(),
+                                        style = MuscuTheme.typography.bodyLarge,
+                                        fontWeight = if (isToday || isSelected) FontWeight.Black else FontWeight.Bold,
+                                        color = if (isSelected) MuscuTheme.colors.onPrimary else MuscuTheme.colors.textPrimary
+                                    )
+                                    if (hasWorkout) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(4.dp)
+                                                .clip(CircleShape)
+                                                .background(if (isSelected) MuscuTheme.colors.onPrimary else MuscuTheme.colors.primary)
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
+        }
 
-            Divider(modifier = Modifier.padding(horizontal = 16.dp))
+        item {
+            HorizontalDivider(modifier = Modifier.padding(16.dp), color = MuscuTheme.colors.divider)
+        }
 
-            // Sessions on selected day
+        // Liste des séances du jour sélectionné
+        item {
             Text(
-                text = "Séances du ${SimpleDateFormat("dd MMMM", Locale.getDefault()).format(selectedDate.time)}",
+                text = "SÉANCES DU ${SimpleDateFormat("dd MMMM", Locale.getDefault()).format(selectedDate.time).uppercase()}",
                 modifier = Modifier.padding(16.dp),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+                style = MuscuTheme.typography.labelSmall,
+                color = MuscuTheme.colors.textSecondary
             )
+        }
 
-            if (workoutsOnSelectedDay.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Aucune séance ce jour-là.", color = MaterialTheme.colorScheme.outline)
+        if (workoutsOnSelectedDay.isEmpty()) {
+            item {
+                Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                    Text("REPOS.", style = MuscuTheme.typography.titleMedium, color = MuscuTheme.colors.divider)
                 }
-            } else {
-                LazyColumn(Modifier.fillMaxSize()) {
-                    items(workoutsOnSelectedDay) { workout ->
-                        WorkoutItemSimple(
-                            workout = workout,
-                            onClick = { onWorkoutClick(workout.session.sessionId) }
-                        )
-                    }
-                }
+            }
+        } else {
+            items(workoutsOnSelectedDay) { workout ->
+                MuscuWorkoutItem(
+                    workout = workout,
+                    onClick = { onWorkoutClick(workout.session.sessionId) }
+                )
             }
         }
     }
 }
 
-@Composable
-fun WorkoutItemSimple(workout: WorkoutWithExercisesAndSets, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).clickable { onClick() }
-    ) {
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(workout.session.title, style = MaterialTheme.typography.titleMedium)
-                Text("${workout.exercises.size} exercices", style = MaterialTheme.typography.bodySmall)
-            }
-            Icon(Icons.Default.ChevronRight, null)
-        }
-    }
-}
-
-fun getDaysInMonth(month: Calendar): List<Calendar?> {
-    val cal = month.clone() as Calendar
+private fun getDaysInMonth(calendar: Calendar): List<Calendar?> {
+    val days = mutableListOf<Calendar?>()
+    val cal = calendar.clone() as Calendar
     cal.set(Calendar.DAY_OF_MONTH, 1)
     
-    // Adjust to Monday = 1
-    var firstDayOfWeek = cal.get(Calendar.DAY_OF_WEEK) - 2
-    if (firstDayOfWeek < 0) firstDayOfWeek += 7
+    val firstDayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
+    val padding = (firstDayOfWeek - Calendar.MONDAY + 7) % 7
     
-    val daysInMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
-    val totalDays = mutableListOf<Calendar?>()
-    
-    for (i in 0 until firstDayOfWeek) {
-        totalDays.add(null)
+    repeat(padding) {
+        days.add(null)
     }
     
+    val daysInMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
     for (i in 1..daysInMonth) {
         val day = cal.clone() as Calendar
         day.set(Calendar.DAY_OF_MONTH, i)
-        totalDays.add(day)
+        days.add(day)
     }
     
-    return totalDays
+    return days
 }
 
-fun isSameDay(cal1: Calendar, cal2: Calendar): Boolean {
+private fun isSameDay(cal1: Calendar, cal2: Calendar): Boolean {
     return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
-           cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
+            cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
 }
 
-fun getStartOfDay(cal: Calendar): Calendar {
-    val res = cal.clone() as Calendar
-    res.set(Calendar.HOUR_OF_DAY, 0)
-    res.set(Calendar.MINUTE, 0)
-    res.set(Calendar.SECOND, 0)
-    res.set(Calendar.MILLISECOND, 0)
-    return res
+private fun getStartOfDay(calendar: Calendar): Calendar {
+    val cal = calendar.clone() as Calendar
+    cal.set(Calendar.HOUR_OF_DAY, 0)
+    cal.set(Calendar.MINUTE, 0)
+    cal.set(Calendar.SECOND, 0)
+    cal.set(Calendar.MILLISECOND, 0)
+    return cal
 }
