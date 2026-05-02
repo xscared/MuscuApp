@@ -15,6 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.muscuapp.data.local.ExerciseEntity
+import com.example.muscuapp.ui.components.MuscuButton
+import com.example.muscuapp.ui.components.MuscuTopBar
+import com.example.muscuapp.ui.theme.MuscuTheme
 import com.example.muscuapp.ui.viewmodel.ExerciseViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -39,18 +42,10 @@ fun WorkoutDetailScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { 
-                    Text(
-                        text = workout?.session?.title ?: if (workouts == null) "Chargement..." else "Séance",
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
-                    }
-                },
+            MuscuTopBar(
+                title = workout?.session?.title ?: if (workouts == null) "Chargement..." else "Séance",
+                navigationIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                onNavigationClick = onBack,
                 actions = {
                     if (workout != null) {
                         IconButton(onClick = { 
@@ -58,18 +53,23 @@ fun WorkoutDetailScreen(
                             onLiveClick(sessionId) 
                         }) {
                             Icon(
-                                if (workout.session.isLive) Icons.Default.PlayArrow else Icons.Default.PlayArrow, 
-                                if (workout.session.isLive) "Continuer l'entraînement" else "Démarrer l'entraînement",
-                                tint = if (workout.session.isLive) MaterialTheme.colorScheme.error else LocalContentColor.current
+                                imageVector = Icons.Default.PlayArrow, 
+                                contentDescription = if (workout.session.isLive) "Continuer l'entraînement" else "Démarrer l'entraînement",
+                                tint = if (workout.session.isLive) MuscuTheme.colors.error else MuscuTheme.colors.textPrimary
                             )
                         }
                     }
                 }
             )
         },
+        containerColor = MuscuTheme.colors.background,
         floatingActionButton = {
             if (workout != null) {
-                FloatingActionButton(onClick = { onAddExercise(sessionId) }) {
+                FloatingActionButton(
+                    onClick = { onAddExercise(sessionId) },
+                    containerColor = MuscuTheme.colors.primary,
+                    contentColor = MuscuTheme.colors.onPrimary
+                ) {
                     Icon(Icons.Default.Add, contentDescription = "Ajouter un exercice")
                 }
             }
@@ -99,11 +99,16 @@ fun WorkoutDetailScreen(
                         modifier = Modifier.align(Alignment.Center),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("Aucun exercice dans cette séance.")
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(onClick = { onAddExercise(sessionId) }) {
-                            Text("Ajouter mon premier exercice")
-                        }
+                        Text(
+                            "Aucun exercice dans cette séance.",
+                            color = MuscuTheme.colors.textSecondary,
+                            style = MuscuTheme.typography.bodyLarge
+                        )
+                        Spacer(modifier = Modifier.height(MuscuTheme.spacing.medium))
+                        MuscuButton(
+                            text = "Ajouter mon premier exercice",
+                            onClick = { onAddExercise(sessionId) }
+                        )
                     }
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxSize()) {

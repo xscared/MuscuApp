@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -21,6 +22,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupProperties
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.muscuapp.ui.components.MuscuButton
+import com.example.muscuapp.ui.components.MuscuTextField
+import com.example.muscuapp.ui.components.MuscuTopBar
+import com.example.muscuapp.ui.theme.MuscuTheme
 import com.example.muscuapp.ui.viewmodel.ExerciseViewModel
 import com.example.muscuapp.ui.viewmodel.SetInfo
 
@@ -84,79 +89,115 @@ fun AddExerciseScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(if (exerciseId == null) "Ajouter un exercice" else "Modifier l'exercice") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
-                    }
-                }
+            MuscuTopBar(
+                title = if (exerciseId == null) "Ajouter un exercice" else "Modifier l'exercice",
+                navigationIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                onNavigationClick = onNavigateBack
             )
-        }
+        },
+        containerColor = MuscuTheme.colors.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
+                .padding(MuscuTheme.spacing.medium)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(MuscuTheme.spacing.medium)
         ) {
             // Catégorie
-            Box(modifier = Modifier.fillMaxWidth()) {
-                OutlinedTextField(
-                    value = category,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Catégorie") },
-                    trailingIcon = {
-                        IconButton(onClick = { expanded = true }) {
-                            Icon(Icons.Default.ArrowDropDown, "Ouvrir")
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
+            Column(verticalArrangement = Arrangement.spacedBy(MuscuTheme.spacing.extraSmall)) {
+                Text(
+                    "Catégorie", 
+                    style = MuscuTheme.typography.bodyMedium, 
+                    color = MuscuTheme.colors.textSecondary
                 )
-                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                    categories.forEach { cat ->
-                        DropdownMenuItem(text = { Text(cat) }, onClick = { category = cat; expanded = false })
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = category,
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = {
+                            IconButton(onClick = { expanded = true }) {
+                                Icon(Icons.Default.ArrowDropDown, "Ouvrir", tint = MuscuTheme.colors.textPrimary)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        textStyle = MuscuTheme.typography.bodyLarge.copy(color = MuscuTheme.colors.textPrimary),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MuscuTheme.colors.primary,
+                            unfocusedBorderColor = MuscuTheme.colors.divider,
+                            unfocusedContainerColor = MuscuTheme.colors.surface,
+                            focusedContainerColor = MuscuTheme.colors.surface
+                        )
+                    )
+                    DropdownMenu(
+                        expanded = expanded, 
+                        onDismissRequest = { expanded = false },
+                        modifier = Modifier.background(MuscuTheme.colors.surface)
+                    ) {
+                        categories.forEach { cat ->
+                            DropdownMenuItem(
+                                text = { Text(cat, color = MuscuTheme.colors.textPrimary) }, 
+                                onClick = { category = cat; expanded = false }
+                            )
+                        }
                     }
                 }
             }
 
             // Nom de l'exercice avec suggestions
-            Box(modifier = Modifier.fillMaxWidth()) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { 
-                        name = it
-                        suggestionExpanded = filteredSuggestions.isNotEmpty()
-                    },
-                    label = { Text("Nom de l'exercice") },
-                    modifier = Modifier.fillMaxWidth()
+            Column(verticalArrangement = Arrangement.spacedBy(MuscuTheme.spacing.extraSmall)) {
+                Text(
+                    "Nom de l'exercice", 
+                    style = MuscuTheme.typography.bodyMedium, 
+                    color = MuscuTheme.colors.textSecondary
                 )
-                DropdownMenu(
-                    expanded = suggestionExpanded,
-                    onDismissRequest = { suggestionExpanded = false },
-                    properties = PopupProperties(focusable = false)
-                ) {
-                    filteredSuggestions.forEach { suggestion ->
-                        DropdownMenuItem(
-                            text = { Text(suggestion) },
-                            onClick = { name = suggestion; suggestionExpanded = false }
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { 
+                            name = it
+                            suggestionExpanded = filteredSuggestions.isNotEmpty()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        textStyle = MuscuTheme.typography.bodyLarge.copy(color = MuscuTheme.colors.textPrimary),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MuscuTheme.colors.primary,
+                            unfocusedBorderColor = MuscuTheme.colors.divider,
+                            unfocusedContainerColor = MuscuTheme.colors.surface,
+                            focusedContainerColor = MuscuTheme.colors.surface
                         )
+                    )
+                    DropdownMenu(
+                        expanded = suggestionExpanded,
+                        onDismissRequest = { suggestionExpanded = false },
+                        properties = PopupProperties(focusable = false),
+                        modifier = Modifier.background(MuscuTheme.colors.surface)
+                    ) {
+                        filteredSuggestions.forEach { suggestion ->
+                            DropdownMenuItem(
+                                text = { Text(suggestion, color = MuscuTheme.colors.textPrimary) },
+                                onClick = { name = suggestion; suggestionExpanded = false }
+                            )
+                        }
                     }
                 }
             }
 
             // Section Séries
-            Text("Séries", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(
+                "Séries", 
+                style = MuscuTheme.typography.titleMedium, 
+                color = MuscuTheme.colors.textPrimary
+            )
             
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(MuscuTheme.spacing.small)) {
                 setDrafts.forEachIndexed { index, draft ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(MuscuTheme.spacing.small)
                     ) {
                         // Label E ou Index
                         IconButton(
@@ -168,43 +209,40 @@ fun AddExerciseScreen(
                             modifier = Modifier.size(32.dp)
                         ) {
                             Surface(
-                                color = if (draft.isWarmup) Color(0xFFFF9800) else MaterialTheme.colorScheme.surfaceVariant,
+                                color = if (draft.isWarmup) Color(0xFFFF9800) else MuscuTheme.colors.divider,
                                 shape = CircleShape
                             ) {
-                                Text(
-                                    if (draft.isWarmup) "E" else "${index + 1}",
-                                    color = if (draft.isWarmup) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(horizontal = 6.dp),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                Box(modifier = Modifier.size(32.dp), contentAlignment = Alignment.Center) {
+                                    Text(
+                                        if (draft.isWarmup) "E" else "${index + 1}",
+                                        color = if (draft.isWarmup) Color.White else MuscuTheme.colors.textSecondary,
+                                        style = MuscuTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
                         }
 
-                        OutlinedTextField(
+                        MuscuTextField(
                             value = draft.weight,
                             onValueChange = { valText ->
                                 setDrafts = setDrafts.toMutableList().apply {
                                     this[index] = draft.copy(weight = valText)
                                 }
                             },
-                            label = { Text("Poids") },
                             modifier = Modifier.weight(1f),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            singleLine = true
+                            keyboardType = KeyboardType.Decimal
                         )
 
-                        OutlinedTextField(
+                        MuscuTextField(
                             value = draft.reps,
                             onValueChange = { valText ->
                                 setDrafts = setDrafts.toMutableList().apply {
                                     this[index] = draft.copy(reps = valText)
                                 }
                             },
-                            label = { Text("Reps") },
                             modifier = Modifier.weight(1f),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true
+                            keyboardType = KeyboardType.Number
                         )
 
                         IconButton(onClick = {
@@ -212,7 +250,7 @@ fun AddExerciseScreen(
                                 setDrafts = setDrafts.toMutableList().apply { removeAt(index) }
                             }
                         }) {
-                            Icon(Icons.Default.RemoveCircleOutline, "Supprimer", tint = MaterialTheme.colorScheme.error)
+                            Icon(Icons.Default.RemoveCircleOutline, "Supprimer", tint = MuscuTheme.colors.error)
                         }
                     }
                 }
@@ -227,25 +265,43 @@ fun AddExerciseScreen(
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MuscuTheme.colors.secondary.copy(alpha = 0.1f), 
+                        contentColor = MuscuTheme.colors.secondary
+                    ),
+                    shape = RoundedCornerShape(8.dp)
                 ) {
                     Icon(Icons.Default.Add, null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Ajouter une série")
+                    Spacer(modifier = Modifier.width(MuscuTheme.spacing.small))
+                    Text("Ajouter une série", style = MuscuTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                 }
             }
 
-            OutlinedTextField(
-                value = note,
-                onValueChange = { note = it },
-                label = { Text("Notes (optionnel)") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 2
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(MuscuTheme.spacing.extraSmall)) {
+                Text(
+                    "Notes (optionnel)", 
+                    style = MuscuTheme.typography.bodyMedium, 
+                    color = MuscuTheme.colors.textSecondary
+                )
+                OutlinedTextField(
+                    value = note,
+                    onValueChange = { note = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3,
+                    textStyle = MuscuTheme.typography.bodyLarge.copy(color = MuscuTheme.colors.textPrimary),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MuscuTheme.colors.primary,
+                        unfocusedBorderColor = MuscuTheme.colors.divider,
+                        unfocusedContainerColor = MuscuTheme.colors.surface,
+                        focusedContainerColor = MuscuTheme.colors.surface
+                    )
+                )
+            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(MuscuTheme.spacing.medium))
             
-            Button(
+            MuscuButton(
+                text = if (exerciseId == null) "Créer l'exercice" else "Sauvegarder",
                 onClick = {
                     if (name.isNotBlank() && setDrafts.isNotEmpty()) {
                         val parsedSets = setDrafts.map { draft ->
@@ -266,11 +322,9 @@ fun AddExerciseScreen(
                         onNavigateBack()
                     }
                 },
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.medium
-            ) {
-                Text(if (exerciseId == null) "Créer l'exercice" else "Sauvegarder les modifications", modifier = Modifier.padding(8.dp))
-            }
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
+

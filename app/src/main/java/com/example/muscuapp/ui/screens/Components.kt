@@ -13,6 +13,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.muscuapp.data.local.ExerciseEntity
 import com.example.muscuapp.data.prefs.WeightUnit
+import com.example.muscuapp.ui.components.MuscuCard
+import com.example.muscuapp.ui.theme.MuscuTheme
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -36,48 +38,70 @@ fun ExerciseItem(
     }
     val unitLabel = if (weightUnit == WeightUnit.LBS) "lbs" else "kg"
 
-    Card(
+    MuscuCard(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-            .clickable { onEdit?.invoke() },
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            .padding(horizontal = MuscuTheme.spacing.medium, vertical = MuscuTheme.spacing.extraSmall),
+        onClick = onEdit
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Badge(containerColor = MaterialTheme.colorScheme.secondary) {
-                            Text(exercise.category, modifier = Modifier.padding(horizontal = 4.dp))
+                        Surface(
+                            color = MuscuTheme.colors.secondary.copy(alpha = 0.2f),
+                            shape = MaterialTheme.shapes.small
+                        ) {
+                            Text(
+                                text = exercise.category,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                style = MuscuTheme.typography.labelSmall,
+                                color = MuscuTheme.colors.secondary
+                            )
                         }
                         if (exercise.isPR) {
                             Spacer(modifier = Modifier.width(8.dp))
-                            Badge(containerColor = Color(0xFFFFD700)) {
-                                Icon(Icons.Default.TrendingUp, null, Modifier.size(12.dp), Color.Black)
-                                Text(" RECORD !", color = Color.Black, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelSmall)
+                            Surface(
+                                color = Color(0xFFFFD700).copy(alpha = 0.2f),
+                                shape = MaterialTheme.shapes.small
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                ) {
+                                    Icon(Icons.Default.TrendingUp, null, Modifier.size(12.dp), Color(0xFFFFD700))
+                                    Text(
+                                        " RECORD !", 
+                                        color = Color(0xFFFFD700), 
+                                        fontWeight = FontWeight.Bold, 
+                                        style = MuscuTheme.typography.labelSmall
+                                    )
+                                }
                             }
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = dateFormat.format(Date(exercise.date)),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            style = MuscuTheme.typography.bodyMedium,
+                            color = MuscuTheme.colors.textSecondary
                         )
                     }
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = exercise.name, style = MaterialTheme.typography.titleLarge)
+                    Text(
+                        text = exercise.name, 
+                        style = MuscuTheme.typography.titleMedium,
+                        color = MuscuTheme.colors.textPrimary
+                    )
                     
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = "${exercise.sets} séries x ${exercise.reps} reps @ ${String.format(Locale.US, "%.1f", displayWeight)} $unitLabel",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.primary
+                            style = MuscuTheme.typography.bodyLarge,
+                            color = MuscuTheme.colors.primary
                         )
                     }
                     
@@ -85,15 +109,16 @@ fun ExerciseItem(
                         val oneRM = displayWeight / (1.0278 - 0.0278 * exercise.reps)
                         Text(
                             text = "1RM estimé: ${String.format(Locale.US, "%.1f", oneRM)} $unitLabel",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.tertiary
+                            style = MuscuTheme.typography.labelSmall,
+                            color = MuscuTheme.colors.textSecondary
                         )
                     }
 
                     if (exercise.note.isNotBlank()) {
                         Text(
                             text = "Note: ${exercise.note}",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MuscuTheme.typography.bodyMedium,
+                            color = MuscuTheme.colors.textSecondary,
                             modifier = Modifier.padding(top = 4.dp)
                         )
                     }
@@ -104,11 +129,11 @@ fun ExerciseItem(
                         Icon(
                             if (exercise.isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
                             contentDescription = "Favori",
-                            tint = if (exercise.isFavorite) Color(0xFFFFD700) else MaterialTheme.colorScheme.outline
+                            tint = if (exercise.isFavorite) Color(0xFFFFD700) else MuscuTheme.colors.textSecondary
                         )
                     }
                     IconButton(onClick = onDelete) {
-                        Icon(Icons.Default.Delete, contentDescription = "Supprimer", tint = MaterialTheme.colorScheme.error)
+                        Icon(Icons.Default.Delete, contentDescription = "Supprimer", tint = MuscuTheme.colors.error)
                     }
                 }
             }
