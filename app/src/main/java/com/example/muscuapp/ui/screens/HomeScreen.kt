@@ -4,7 +4,6 @@ import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.widget.Toast
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,14 +14,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.muscuapp.data.local.WorkoutSessionEntity
 import com.example.muscuapp.data.prefs.WeightUnit
 import com.example.muscuapp.data.prefs.ThemeMode
-import com.example.muscuapp.ui.components.MuscuScreen
-import com.example.muscuapp.ui.components.MuscuWorkoutItem
-import com.example.muscuapp.ui.components.muscuClickable
+import com.example.muscuapp.ui.components.*
 import com.example.muscuapp.ui.theme.MuscuTheme
 import com.example.muscuapp.ui.viewmodel.ExerciseViewModel
 
@@ -43,13 +41,7 @@ fun HomeScreen(
     var showTemplateDialog by remember { mutableStateOf(false) }
     var newWorkoutTitle by remember { mutableStateOf("") }
     
-    var selectedWorkoutForAction by remember { mutableStateOf<WorkoutSessionEntity?>(null) }
-    var showActionMenu by remember { mutableStateOf(false) }
-    var showDeleteConfirm by remember { mutableStateOf(false) }
-    var showRenameDialog by remember { mutableStateOf(false) }
-    var renameText by remember { mutableStateOf("") }
-    
-    var showSettingsMenu by remember { mutableStateOf(false) }
+    var showSettingsSheet by remember { mutableStateOf(false) }
 
     val exportBackupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri != null) {
@@ -76,66 +68,8 @@ fun HomeScreen(
             IconButton(onClick = onStatsClick) {
                 Icon(Icons.Default.BarChart, contentDescription = "Stats", tint = MuscuTheme.colors.textPrimary)
             }
-            Box {
-                IconButton(onClick = { showSettingsMenu = true }) {
-                    Icon(Icons.Default.Settings, contentDescription = "Paramètres", tint = MuscuTheme.colors.textPrimary)
-                }
-                DropdownMenu(
-                    expanded = showSettingsMenu,
-                    onDismissRequest = { showSettingsMenu = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Thème : ${when(themeMode) {
-                            ThemeMode.LIGHT -> "Clair"
-                            ThemeMode.DARK -> "Sombre"
-                            ThemeMode.SYSTEM -> "Système"
-                        }}") },
-                        onClick = { 
-                            val nextMode = when(themeMode) {
-                                ThemeMode.SYSTEM -> ThemeMode.LIGHT
-                                ThemeMode.LIGHT -> ThemeMode.DARK
-                                ThemeMode.DARK -> ThemeMode.SYSTEM
-                            }
-                            viewModel.setThemeMode(nextMode)
-                            showSettingsMenu = false 
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Unité : ${if (weightUnit == WeightUnit.KG) "KG" else "LBS"}") },
-                        onClick = { 
-                            viewModel.toggleWeightUnit()
-                            showSettingsMenu = false 
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Partager en CSV") },
-                        onClick = {
-                            showSettingsMenu = false
-                            viewModel.exportCsv { csvData ->
-                                val intent = Intent(Intent.ACTION_SEND).apply {
-                                    type = "text/csv"
-                                    putExtra(Intent.EXTRA_TEXT, csvData)
-                                    putExtra(Intent.EXTRA_SUBJECT, "Export MuscuApp")
-                                }
-                                context.startActivity(Intent.createChooser(intent, "Exporter mes données"))
-                            }
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Sauvegarder les données (JSON)") },
-                        onClick = {
-                            showSettingsMenu = false
-                            exportBackupLauncher.launch("muscuapp_backup.json")
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Restaurer une sauvegarde (JSON)") },
-                        onClick = {
-                            showSettingsMenu = false
-                            importBackupLauncher.launch("application/json")
-                        }
-                    )
-                }
+            IconButton(onClick = { showSettingsSheet = true }) {
+                Icon(Icons.Default.Settings, contentDescription = "Paramètres", tint = MuscuTheme.colors.textPrimary)
             }
         },
         bottomBar = {
@@ -175,132 +109,117 @@ fun HomeScreen(
         }
     }
 
-    // Dialogs remain outside the MuscuScreen content for overlay behavior
-    if (showActionMenu && selectedWorkoutForAction != null) {
-        AlertDialog(
-            onDismissRequest = { showActionMenu = false },
-            title = { Text(selectedWorkoutForAction!!.title) },
-            text = {
-                Column {
-                    ListItem(
-                        headlineContent = { Text("Renommer") },
-                        leadingContent = { Icon(Icons.Default.Edit, null) },
-                        modifier = Modifier.clickable {
-                            showActionMenu = false
-                            showRenameDialog = true
-                        }
-                    )
-                    ListItem(
-                        headlineContent = { Text("Supprimer", color = MaterialTheme.colorScheme.error) },
-                        leadingContent = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
-                        modifier = Modifier.clickable {
-                            showActionMenu = false
-                            showDeleteConfirm = true
-                        }
-                    )
+    // --- CUSTOM SETTINGS SHEET ---
+    MuscuActionSheet(
+        visible = showSettingsSheet,
+        onDismiss = { showSettingsSheet = false },
+        title = "Paramètres"
+    ) {
+        MuscuActionItem(
+            label = "Thème : ${when(themeMode) {
+                ThemeMode.LIGHT -> "Clair"
+                ThemeMode.DARK -> "Sombre"
+                ThemeMode.SYSTEM -> "Système"
+            }}",
+            icon = Icons.Default.Palette,
+            onClick = {
+                val nextMode = when(themeMode) {
+                    ThemeMode.SYSTEM -> ThemeMode.LIGHT
+                    ThemeMode.LIGHT -> ThemeMode.DARK
+                    ThemeMode.DARK -> ThemeMode.SYSTEM
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { showActionMenu = false }) { Text("Fermer") }
+                viewModel.setThemeMode(nextMode)
             }
         )
-    }
-
-    if (showRenameDialog && selectedWorkoutForAction != null) {
-        AlertDialog(
-            onDismissRequest = { showRenameDialog = false },
-            title = { Text("Renommer la séance") },
-            text = {
-                OutlinedTextField(
-                    value = renameText,
-                    onValueChange = { renameText = it },
-                    label = { Text("Nouveau nom") }
-                )
-            },
-            confirmButton = {
-                Button(onClick = {
-                    if (renameText.isNotBlank()) {
-                        viewModel.renameWorkout(selectedWorkoutForAction!!, renameText)
-                        showRenameDialog = false
-                        selectedWorkoutForAction = null
+        MuscuActionItem(
+            label = "Unité : ${if (weightUnit == WeightUnit.KG) "KG" else "LBS"}",
+            icon = Icons.Default.Straighten,
+            onClick = { viewModel.toggleWeightUnit() }
+        )
+        MuscuActionItem(
+            label = "Partager en CSV",
+            icon = Icons.Default.Share,
+            onClick = {
+                showSettingsSheet = false
+                viewModel.exportCsv { csvData ->
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/csv"
+                        putExtra(Intent.EXTRA_TEXT, csvData)
+                        putExtra(Intent.EXTRA_SUBJECT, "Export MuscuApp")
                     }
-                }) { Text("Enregistrer") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showRenameDialog = false }) { Text("Annuler") }
+                    context.startActivity(Intent.createChooser(intent, "Exporter mes données"))
+                }
+            }
+        )
+        MuscuActionItem(
+            label = "Sauvegarder (JSON)",
+            icon = Icons.Default.CloudUpload,
+            onClick = {
+                showSettingsSheet = false
+                exportBackupLauncher.launch("muscuapp_backup.json")
+            }
+        )
+        MuscuActionItem(
+            label = "Restaurer (JSON)",
+            icon = Icons.Default.CloudDownload,
+            onClick = {
+                showSettingsSheet = false
+                importBackupLauncher.launch("application/json")
             }
         )
     }
 
-    if (showDeleteConfirm && selectedWorkoutForAction != null) {
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("Supprimer la séance ?") },
-            text = { Text("Cette action supprimera définitivement la séance '${selectedWorkoutForAction!!.title}' et tous les exercices associés.") },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.deleteWorkout(selectedWorkoutForAction!!)
-                        showDeleteConfirm = false
-                        selectedWorkoutForAction = null
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) { Text("Supprimer") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) { Text("Annuler") }
-            }
-        )
-    }
-
+    // Dialogs remain for input fields, but using our custom interaction logic
     if (showAddDialog) {
         AlertDialog(
             onDismissRequest = { showAddDialog = false },
-            title = { Text("Nouvelle Séance") },
+            title = { Text("Nouvelle Séance", style = MuscuTheme.typography.titleMedium) },
             text = {
                 OutlinedTextField(
                     value = newWorkoutTitle,
                     onValueChange = { newWorkoutTitle = it },
-                    label = { Text("Nom de la séance (ex: Push)") }
+                    label = { Text("Nom de la séance") },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MuscuTheme.colors.primary,
+                        unfocusedBorderColor = MuscuTheme.colors.divider
+                    )
                 )
             },
             confirmButton = {
-                Button(onClick = {
-                    if (newWorkoutTitle.isNotBlank()) {
-                        viewModel.createWorkout(newWorkoutTitle) { id ->
-                            onWorkoutClick(id)
+                TextButton(
+                    onClick = {
+                        if (newWorkoutTitle.isNotBlank()) {
+                            viewModel.createWorkout(newWorkoutTitle) { id ->
+                                onWorkoutClick(id)
+                            }
+                            showAddDialog = false
+                            newWorkoutTitle = ""
                         }
-                        showAddDialog = false
-                        newWorkoutTitle = ""
                     }
-                }) { Text("Créer") }
+                ) { Text("CRÉER", color = MuscuTheme.colors.primary, fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
-                TextButton(onClick = { showAddDialog = false }) { Text("Annuler") }
+                TextButton(onClick = { showAddDialog = false }) { Text("ANNULER", color = MuscuTheme.colors.textSecondary) }
             }
         )
     }
 
     if (showTemplateDialog) {
-        AlertDialog(
-            onDismissRequest = { showTemplateDialog = false },
-            title = { Text("Démarrer depuis un modèle") },
-            text = {
-                LazyColumn {
-                    items(templates) { template ->
-                        ListItem(
-                            headlineContent = { Text(template.template.name) },
-                            modifier = Modifier.clickable {
-                                viewModel.createWorkoutFromTemplate(template)
-                                showTemplateDialog = false
-                            }
-                        )
+        MuscuActionSheet(
+            visible = showTemplateDialog,
+            onDismiss = { showTemplateDialog = false },
+            title = "Démarrer un modèle"
+        ) {
+            templates.forEach { template ->
+                MuscuActionItem(
+                    label = template.template.name,
+                    icon = Icons.Default.ContentPaste,
+                    onClick = {
+                        viewModel.createWorkoutFromTemplate(template)
+                        showTemplateDialog = false
                     }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showTemplateDialog = false }) { Text("Fermer") }
+                )
             }
-        )
+        }
     }
 }
