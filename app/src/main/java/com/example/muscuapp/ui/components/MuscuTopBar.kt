@@ -56,7 +56,7 @@ fun MuscuTopBar(
                 content = actions
             )
         }
-        
+
         // Fine divider
         Box(
             modifier = Modifier

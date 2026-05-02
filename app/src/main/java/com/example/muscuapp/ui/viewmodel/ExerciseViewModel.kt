@@ -119,6 +119,9 @@ class ExerciseViewModel @Inject constructor(
         }
     }
 
+    fun getExercisesWithSets(sessionId: Long): Flow<List<ExerciseWithSets>> =
+        repository.getExercisesWithSetsForSession(sessionId)
+
     fun addExerciseWithDetailedSets(
         sessionId: Long,
         name: String,
@@ -195,6 +198,37 @@ class ExerciseViewModel @Inject constructor(
         }
     }
 
+    fun addExercise(sessionId: Long, name: String, sets: Int, reps: Int, weight: Float, category: String, note: String) {
+        viewModelScope.launch {
+            val currentPR = repository.getPersonalRecord(name) ?: 0f
+            val isPR = weight > currentPR
+
+            val currentExercises = repository.getExercisesForSession(sessionId).first()
+            val nextOrder = (currentExercises.maxOfOrNull { it.order } ?: -1) + 1
+
+            val exerciseId = repository.insertExercise(
+                ExerciseEntity(
+                    sessionId = sessionId,
+                    name = name,
+                    sets = sets,
+                    reps = reps,
+                    weight = weight,
+                    category = category,
+                    note = note,
+                    isPR = isPR,
+                    order = nextOrder
+                )
+            )
+
+            val workout = repository.getAllWorkouts().first().find { it.session.sessionId == sessionId }
+            if (workout?.session?.isLive == true) {
+                repeat(sets) {
+                    repository.insertSet(ExerciseSetEntity(exerciseId = exerciseId, reps = reps, weight = weight))
+                }
+            }
+        }
+    }
+
     fun reorderExercises(exercises: List<ExerciseEntity>) {
         viewModelScope.launch {
             try {
@@ -210,6 +244,12 @@ class ExerciseViewModel @Inject constructor(
     fun deleteExercise(exercise: ExerciseEntity) {
         viewModelScope.launch {
             repository.deleteExercise(exercise)
+        }
+    }
+
+    fun updateExerciseDetails(exercise: ExerciseEntity) {
+        viewModelScope.launch {
+            repository.updateExercise(exercise)
         }
     }
 

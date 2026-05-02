@@ -39,14 +39,14 @@ fun MuscuWorkoutItem(
                     .width(4.dp)
                     .height(40.dp)
                     .background(
-                        if (workout.session.isLive) MuscuTheme.colors.primary 
+                        if (workout.session.isLive) MuscuTheme.colors.primary
                         else MuscuTheme.colors.divider,
                         shape = androidx.compose.foundation.shape.CircleShape
                     )
             )
-            
+
             Spacer(modifier = Modifier.width(MuscuTheme.spacing.medium))
-            
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = workout.session.title,
