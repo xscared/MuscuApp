@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -31,6 +32,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.muscuapp.data.local.ExerciseSetEntity
 import com.example.muscuapp.data.local.ExerciseWithSets
 import com.example.muscuapp.service.WorkoutTimerService
+import com.example.muscuapp.ui.components.MuscuButton
+import com.example.muscuapp.ui.components.MuscuCard
+import com.example.muscuapp.ui.components.MuscuSuccessCard
+import com.example.muscuapp.ui.components.MuscuTextField
+import com.example.muscuapp.ui.components.MuscuTopBar
+import com.example.muscuapp.ui.theme.MuscuTheme
 import com.example.muscuapp.ui.viewmodel.ExerciseViewModel
 import kotlinx.coroutines.delay
 import java.util.Locale
@@ -61,28 +68,16 @@ fun LiveWorkoutScreen(
     }
 
     Scaffold(
+        containerColor = MuscuTheme.colors.background,
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(workout?.session?.title ?: "Live", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            text = formatElapsedTime(timeElapsed),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Retour")
-                    }
-                },
+             MuscuTopBar(
+                title = workout?.session?.title ?: "Live",
+                navigationIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                onNavigationClick = onBack,
                 actions = {
                     TextButton(
                         onClick = { showFinishSummary = true },
-                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                        colors = ButtonDefaults.textButtonColors(contentColor = MuscuTheme.colors.error)
                     ) {
                         Text("TERMINER", fontWeight = FontWeight.Bold)
                     }
@@ -92,9 +87,17 @@ fun LiveWorkoutScreen(
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
             if (workout == null) {
-                CircularProgressIndicator(Modifier.align(Alignment.Center))
+                CircularProgressIndicator(Modifier.align(Alignment.Center), color = MuscuTheme.colors.primary)
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 80.dp)) {
+                    item {
+                        Text(
+                            text = "DURÉE : ${formatElapsedTime(timeElapsed)}",
+                            modifier = Modifier.padding(16.dp),
+                            style = MuscuTheme.typography.labelSmall,
+                            color = MuscuTheme.colors.primary
+                        )
+                    }
                     items(workout.exercises.sortedBy { it.exercise.order }) { exerciseWithSets ->
                         LiveExerciseCard(
                             exerciseWithSets = exerciseWithSets,
@@ -124,52 +127,68 @@ fun LiveWorkoutScreen(
             var isCustom by remember { mutableStateOf(false) }
             val focusRequester = remember { FocusRequester() }
 
-            AlertDialog(
-                onDismissRequest = { showRestTimeSelector = false },
-                title = { Text("Temps de repos") },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                MuscuCard(
+                    borderColor = MuscuTheme.colors.primary,
+                    modifier = Modifier.widthIn(max = 400.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(
+                            "Temps de repos", 
+                            style = MuscuTheme.typography.titleMedium,
+                            color = MuscuTheme.colors.primary
+                        )
+                        
                         if (!isCustom) {
-                            Button(onClick = { startTimer(context, 60, sessionId); showRestTimeSelector = false }, modifier = Modifier.fillMaxWidth()) { Text("1 min") }
-                            Button(onClick = { startTimer(context, 90, sessionId); showRestTimeSelector = false }, modifier = Modifier.fillMaxWidth()) { Text("1 min 30s") }
-                            Button(onClick = { startTimer(context, 120, sessionId); showRestTimeSelector = false }, modifier = Modifier.fillMaxWidth()) { Text("2 min") }
-                            OutlinedButton(
+                            MuscuButton(text = "1 MIN", onClick = { startTimer(context, 60, sessionId); showRestTimeSelector = false }, modifier = Modifier.fillMaxWidth())
+                            MuscuButton(text = "1 MIN 30S", onClick = { startTimer(context, 90, sessionId); showRestTimeSelector = false }, modifier = Modifier.fillMaxWidth())
+                            MuscuButton(text = "2 MIN", onClick = { startTimer(context, 120, sessionId); showRestTimeSelector = false }, modifier = Modifier.fillMaxWidth())
+                            TextButton(
                                 onClick = { isCustom = true }, 
                                 modifier = Modifier.fillMaxWidth()
                             ) { 
-                                Text("Personnalisé")
+                                Text("PERSONNALISÉ", color = MuscuTheme.colors.textSecondary) 
                             }
                         } else {
-                            OutlinedTextField(
-                                value = customTime,
-                                onValueChange = { customTime = it },
-                                label = { Text("Secondes") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            MuscuTextField(
+                                value = customTime.text,
+                                onValueChange = { customTime = customTime.copy(text = it) },
+                                keyboardType = KeyboardType.Number,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .focusRequester(focusRequester),
-                                singleLine = true
+                                    .focusRequester(focusRequester)
                             )
                             
                             LaunchedEffect(Unit) {
                                 focusRequester.requestFocus()
                             }
+                            
+                            MuscuButton(
+                                text = "DÉMARRER", 
+                                onClick = { 
+                                    val secs = customTime.text.toIntOrNull() ?: 60
+                                    startTimer(context, secs, sessionId)
+                                    showRestTimeSelector = false 
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        
+                        TextButton(
+                            onClick = { showRestTimeSelector = false },
+                            modifier = Modifier.align(Alignment.End)
+                        ) {
+                            Text("PASSER", color = MuscuTheme.colors.textSecondary)
                         }
                     }
-                },
-                confirmButton = {
-                    if (isCustom) {
-                        Button(onClick = { 
-                            val secs = customTime.text.toIntOrNull() ?: 60
-                            startTimer(context, secs, sessionId)
-                            showRestTimeSelector = false 
-                        }) { Text("Démarrer") }
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showRestTimeSelector = false }) { Text("Passer") }
                 }
-            )
+            }
         }
 
         if (showFinishSummary && workout != null) {
@@ -178,42 +197,23 @@ fun LiveWorkoutScreen(
             }
             val setsDone = workout.exercises.sumOf { ex -> ex.sets.count { it.isCompleted } }
 
-            AlertDialog(
-                onDismissRequest = { showFinishSummary = false },
-                title = { Text("Séance terminée ! 🔥") },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Félicitations pour ton entraînement.")
-                        Divider()
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Durée :")
-                            Text(formatElapsedTime(timeElapsed), fontWeight = FontWeight.Bold)
-                        }
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Volume total :")
-                            Text("${totalVolume.toInt()} kg", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                        }
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Séries complétées :")
-                            Text("$setsDone", fontWeight = FontWeight.Bold)
-                        }
-                    }
-                },
-                confirmButton = {
-                    Button(onClick = {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                MuscuSuccessCard(
+                    title = "SÉANCE TERMINÉE ! 🔥",
+                    message = "Félicitations !\nDurée : ${formatElapsedTime(timeElapsed)}\nVolume : ${totalVolume.toInt()} kg\nSéries : $setsDone",
+                    onDismiss = {
                         viewModel.endWorkout(workout.session) {
                             onBack()
                         }
-                    }) {
-                        Text("Enregistrer et quitter")
                     }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showFinishSummary = false }) {
-                        Text("Continuer l'entraînement")
-                    }
-                }
-            )
+                )
+            }
         }
     }
 }
@@ -226,32 +226,33 @@ fun LiveExerciseCard(
     onAddWarmup: () -> Unit,
     onDeleteWarmup: (ExerciseSetEntity) -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(12.dp, 8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
+    MuscuCard(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
-                        modifier = Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary)
+                        modifier = Modifier.size(8.dp).clip(CircleShape).background(MuscuTheme.colors.primary)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(exerciseWithSets.exercise.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(
+                        exerciseWithSets.exercise.name, 
+                        style = MuscuTheme.typography.titleMedium, 
+                        color = MuscuTheme.colors.textPrimary
+                    )
                 }
                 TextButton(onClick = onAddWarmup) {
-                    Text("+ Échauffement", style = MaterialTheme.typography.labelSmall)
+                    Text("+ Échauffement", style = MuscuTheme.typography.labelSmall, color = MuscuTheme.colors.primary)
                 }
             }
             
             Spacer(modifier = Modifier.height(16.dp))
             
             Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("SÉRIE", modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelSmall)
-                Text("POIDS (KG)", modifier = Modifier.weight(1.5f), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall)
-                Text("REPS", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall)
+                Text("SÉRIE", modifier = Modifier.weight(1f), style = MuscuTheme.typography.labelSmall, color = MuscuTheme.colors.textSecondary)
+                Text("POIDS (KG)", modifier = Modifier.weight(1.5f), textAlign = TextAlign.Center, style = MuscuTheme.typography.labelSmall, color = MuscuTheme.colors.textSecondary)
+                Text("REPS", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, style = MuscuTheme.typography.labelSmall, color = MuscuTheme.colors.textSecondary)
                 Spacer(modifier = Modifier.width(48.dp))
             }
 
@@ -285,9 +286,9 @@ fun LiveSetRow(
         modifier = Modifier
             .fillMaxWidth()
             .height(56.dp)
-            .clip(MaterialTheme.shapes.small)
+            .clip(RoundedCornerShape(8.dp))
             .background(
-                if (set.isCompleted) Color(0xFF4CAF50).copy(alpha = 0.1f) 
+                if (set.isCompleted) MuscuTheme.colors.success.copy(alpha = 0.1f) 
                 else if (set.isWarmup) Color(0xFFFF9800).copy(alpha = 0.1f)
                 else Color.Transparent
             ),
@@ -296,46 +297,39 @@ fun LiveSetRow(
         Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
             if (set.isWarmup) {
                 Surface(color = Color(0xFFFF9800), shape = CircleShape) {
-                    Text("E", color = Color.White, modifier = Modifier.padding(horizontal = 6.dp), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                    Text("E", color = Color.White, modifier = Modifier.padding(horizontal = 6.dp), style = MuscuTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                 }
             } else {
-                Text("${index + 1}", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                Text(
+                    text = "${index + 1}", 
+                    style = MuscuTheme.typography.bodyLarge, 
+                    color = if (set.isCompleted) MuscuTheme.colors.success else MuscuTheme.colors.textPrimary,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
 
-        TextField(
+        MuscuTextField(
             value = weightText,
             onValueChange = { 
                 weightText = it
                 it.toFloatOrNull()?.let { w -> onUpdate(set.copy(weight = w)) }
             },
             modifier = Modifier.weight(1.5f),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            textStyle = MaterialTheme.typography.bodyLarge.copy(textAlign = TextAlign.Center, fontWeight = FontWeight.Bold),
-            colors = TextFieldDefaults.colors(
-                unfocusedContainerColor = Color.Transparent,
-                focusedContainerColor = Color.Transparent
-            ),
-            singleLine = true
+            keyboardType = KeyboardType.Decimal
         )
 
-        TextField(
+        Spacer(modifier = Modifier.width(8.dp))
+
+        MuscuTextField(
             value = repsText,
             onValueChange = { 
                 repsText = it
                 it.toIntOrNull()?.let { r -> onUpdate(set.copy(reps = r)) }
             },
             modifier = Modifier.weight(1f),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            textStyle = MaterialTheme.typography.bodyLarge.copy(textAlign = TextAlign.Center, fontWeight = FontWeight.Bold),
-            colors = TextFieldDefaults.colors(
-                unfocusedContainerColor = Color.Transparent,
-                focusedContainerColor = Color.Transparent
-            ),
-            singleLine = true
+            keyboardType = KeyboardType.Number
         )
-
-        Spacer(modifier = Modifier.width(8.dp))
 
         Row(
             modifier = Modifier.widthIn(min = if (onDelete != null) 96.dp else 48.dp),
@@ -343,28 +337,17 @@ fun LiveSetRow(
             horizontalArrangement = Arrangement.End
         ) {
             if (onDelete != null) {
-                IconButton(
-                    onClick = onDelete,
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Supprimer l'échauffement",
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(24.dp)
-                    )
+                IconButton(onClick = onDelete, modifier = Modifier.size(40.dp)) {
+                    Icon(Icons.Default.Delete, null, tint = MuscuTheme.colors.error, modifier = Modifier.size(20.dp))
                 }
             }
 
-            IconButton(
-                onClick = { onToggle(!set.isCompleted) },
-                modifier = Modifier.size(48.dp)
-            ) {
+            IconButton(onClick = { onToggle(!set.isCompleted) }, modifier = Modifier.size(48.dp)) {
                 Icon(
                     imageVector = if (set.isCompleted) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
                     contentDescription = null,
-                    tint = if (set.isCompleted) Color(0xFF4CAF50) else MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.size(32.dp)
+                    tint = if (set.isCompleted) MuscuTheme.colors.success else MuscuTheme.colors.divider,
+                    modifier = Modifier.size(28.dp)
                 )
             }
         }

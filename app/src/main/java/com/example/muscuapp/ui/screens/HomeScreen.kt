@@ -26,6 +26,9 @@ import com.example.muscuapp.data.local.WorkoutSessionEntity
 import com.example.muscuapp.data.local.TemplateWithExercises
 import com.example.muscuapp.data.local.WorkoutWithExercisesAndSets
 import com.example.muscuapp.data.prefs.WeightUnit
+import com.example.muscuapp.ui.components.MuscuTopBar
+import com.example.muscuapp.ui.components.MuscuWorkoutItem
+import com.example.muscuapp.ui.theme.MuscuTheme
 import com.example.muscuapp.ui.viewmodel.ExerciseViewModel
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
@@ -75,38 +78,20 @@ fun HomeScreen(
     }
 
     Scaffold(
+        containerColor = MuscuTheme.colors.background,
         topBar = {
-            TopAppBar(
-                title = { 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("MuscuApp")
-                        if (streakCount > 0) {
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Surface(
-                                color = Color(0xFFFF5722).copy(alpha = 0.1f),
-                                shape = MaterialTheme.shapes.small
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(Icons.Default.LocalFireDepartment, null, tint = Color(0xFFFF5722), modifier = Modifier.size(16.dp))
-                                    Text(" $streakCount", color = Color(0xFFFF5722), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-                    }
-                },
+            MuscuTopBar(
+                title = "MuscuApp",
                 actions = {
                     IconButton(onClick = onCalendarClick) {
-                        Icon(Icons.Default.CalendarMonth, contentDescription = "Calendrier")
+                        Icon(Icons.Default.CalendarMonth, contentDescription = "Calendrier", tint = MuscuTheme.colors.textPrimary)
                     }
                     IconButton(onClick = onStatsClick) {
-                        Icon(Icons.Default.BarChart, contentDescription = "Stats")
+                        Icon(Icons.Default.BarChart, contentDescription = "Stats", tint = MuscuTheme.colors.textPrimary)
                     }
                     Box {
                         IconButton(onClick = { showSettingsMenu = true }) {
-                            Icon(Icons.Default.Settings, contentDescription = "Paramètres")
+                            Icon(Icons.Default.Settings, contentDescription = "Paramètres", tint = MuscuTheme.colors.textPrimary)
                         }
                         DropdownMenu(
                             expanded = showSettingsMenu,
@@ -155,11 +140,19 @@ fun HomeScreen(
         floatingActionButton = {
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (templates.isNotEmpty()) {
-                    SmallFloatingActionButton(onClick = { showTemplateDialog = true }) {
+                    SmallFloatingActionButton(
+                        onClick = { showTemplateDialog = true },
+                        containerColor = MuscuTheme.colors.surface,
+                        contentColor = MuscuTheme.colors.primary
+                    ) {
                         Icon(Icons.Default.ContentPaste, contentDescription = "Démarrer un modèle")
                     }
                 }
-                FloatingActionButton(onClick = { showAddDialog = true }) {
+                FloatingActionButton(
+                    onClick = { showAddDialog = true },
+                    containerColor = MuscuTheme.colors.primary,
+                    contentColor = MuscuTheme.colors.onPrimary
+                ) {
                     Icon(Icons.Default.Add, contentDescription = "Nouvelle Séance")
                 }
             }
@@ -168,19 +161,22 @@ fun HomeScreen(
         Column(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
             if (workouts.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Aucune séance.\nAppuyez sur + pour commencer.", textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    Text(
+                        text = "Aucune séance.\nAppuyez sur + pour commencer.", 
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        color = MuscuTheme.colors.textSecondary,
+                        style = MuscuTheme.typography.bodyLarge
+                    )
                 }
             } else {
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(vertical = MuscuTheme.spacing.small)
+                ) {
                     items(workouts) { workout ->
-                        WorkoutItem(
+                        MuscuWorkoutItem(
                             workout = workout,
-                            onClick = { onWorkoutClick(workout.session.sessionId) },
-                            onLongClick = {
-                                selectedWorkoutForAction = workout.session
-                                renameText = workout.session.title
-                                showActionMenu = true
-                            }
+                            onClick = { onWorkoutClick(workout.session.sessionId) }
                         )
                     }
                 }
