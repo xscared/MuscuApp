@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.sp
 data class MuscuColors(
     val background: Color,
     val surface: Color,
+    val surfaceVariant: Color,
     val primary: Color,
     val onPrimary: Color,
     val secondary: Color,
@@ -27,12 +28,14 @@ data class MuscuColors(
 
 @Immutable
 data class MuscuTypography(
+    val displayLarge: TextStyle, // Titres massifs (Collapsing)
     val titleLarge: TextStyle,
     val titleMedium: TextStyle,
     val bodyLarge: TextStyle,
     val bodyMedium: TextStyle,
     val labelSmall: TextStyle,
-    val timerLarge: TextStyle
+    val timerLarge: TextStyle,
+    val monoLabel: TextStyle   // Label typé technique/chrono
 )
 
 @Immutable
@@ -46,61 +49,80 @@ data class MuscuSpacing(
 )
 
 val DarkMuscuColors = MuscuColors(
-    background = Color(0xFF121212),
-    surface = Color(0xFF1E1E1E),
-    primary = Color(0xFFFF5722), // Orange Électrique
+    background = Color(0xFF000000), // Vrai Noir (OLED)
+    surface = Color(0xFF0A0A0A),    // Très proche du noir
+    surfaceVariant = Color(0xFF151515),
+    primary = Color(0xFFFF4500),    // Orange-Rouge Néon
     onPrimary = Color.White,
-    secondary = Color(0xFF03DAC6),
+    secondary = Color(0xFF00E5FF),  // Cyan Électrique
     textPrimary = Color.White,
-    textSecondary = Color(0xFFB3B3B3),
-    error = Color(0xFFCF6679),
-    success = Color(0xFF4CAF50),
-    divider = Color(0xFF2C2C2C)
+    textSecondary = Color(0xFF636366), // Gris sombre
+    error = Color(0xFFFF3B30),
+    success = Color(0xFF32D74B),
+    divider = Color(0xFF1C1C1E)
 )
 
 val LightMuscuColors = MuscuColors(
-    background = Color(0xFFF5F5F5),
-    surface = Color.White,
-    primary = Color(0xFFFF5722), // On garde l'orange
+    background = Color(0xFFFFFFFF),
+    surface = Color(0xFFF2F2F7),
+    surfaceVariant = Color(0xFFE5E5EA),
+    primary = Color(0xFFFF4500),
     onPrimary = Color.White,
-    secondary = Color(0xFF018786),
-    textPrimary = Color(0xFF121212),
-    textSecondary = Color(0xFF757575),
-    error = Color(0xFFB00020),
-    success = Color(0xFF388E3C),
-    divider = Color(0xFFE0E0E0)
+    secondary = Color(0xFF007AFF),
+    textPrimary = Color(0xFF1C1C1E),
+    textSecondary = Color(0xFF8E8E93),
+    error = Color(0xFFFF3B30),
+    success = Color(0xFF34C759),
+    divider = Color(0xFFC6C6C8)
 )
 
 val DefaultMuscuTypography = MuscuTypography(
+    displayLarge = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Black,
+        fontSize = 42.sp,
+        letterSpacing = (-1.5).sp,
+        lineHeight = 44.sp
+    ),
     titleLarge = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Bold,
-        fontSize = 24.sp
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.ExtraBold,
+        fontSize = 24.sp,
+        letterSpacing = (-0.5).sp
     ),
     titleMedium = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 18.sp
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Bold,
+        fontSize = 18.sp,
+        letterSpacing = 0.sp
     ),
     bodyLarge = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Medium,
         fontSize = 16.sp
     ),
     bodyMedium = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp
     ),
     labelSmall = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Medium,
-        fontSize = 12.sp
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Bold,
+        fontSize = 11.sp,
+        letterSpacing = 1.2.sp
     ),
     timerLarge = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = FontFamily.Monospace,
         fontWeight = FontWeight.Black,
-        fontSize = 48.sp
+        fontSize = 64.sp,
+        letterSpacing = (-2).sp
+    ),
+    monoLabel = TextStyle(
+        fontFamily = FontFamily.Monospace,
+        fontWeight = FontWeight.Bold,
+        fontSize = 10.sp,
+        color = Color(0xFFFF4500).copy(alpha = 0.8f)
     )
 )
 
