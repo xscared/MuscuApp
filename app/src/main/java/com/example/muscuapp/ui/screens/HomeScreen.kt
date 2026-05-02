@@ -22,6 +22,7 @@ import com.example.muscuapp.data.prefs.WeightUnit
 import com.example.muscuapp.data.prefs.ThemeMode
 import com.example.muscuapp.ui.components.MuscuScreen
 import com.example.muscuapp.ui.components.MuscuWorkoutItem
+import com.example.muscuapp.ui.components.muscuClickable
 import com.example.muscuapp.ui.theme.MuscuTheme
 import com.example.muscuapp.ui.viewmodel.ExerciseViewModel
 
@@ -139,7 +140,7 @@ fun HomeScreen(
         },
         bottomBar = {
             Row(
-                modifier = Modifier.fillMaxSize().clickable { showAddDialog = true },
+                modifier = Modifier.fillMaxSize().muscuClickable { showAddDialog = true },
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
