@@ -121,7 +121,7 @@ fun MuscuScreen(
                     .padding(horizontal = 24.dp)
                     .fillMaxWidth()
                     .height(64.dp)
-                    .clip(RoundedCornerShape(32.dp))
+                    .clip(SquircleShape(n = 3.5f)) // Utilisation du Squircle pour la barre d'action
                     .background(
                         Brush.horizontalGradient(
                             colors = listOf(

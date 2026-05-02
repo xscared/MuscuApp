@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -19,7 +18,8 @@ fun MuscuCard(
     borderColor: Color = Color.Transparent,
     content: @Composable () -> Unit
 ) {
-    val shape = RoundedCornerShape(20.dp) // Coins plus modernes
+    // On utilise la forme asymétrique pour les cartes pour un look unique
+    val shape = AsymmetricCardShape(radius = 48f)
     
     val cardModifier = Modifier
         .clip(shape)
@@ -31,7 +31,6 @@ fun MuscuCard(
         )
         .then(
             if (onClick != null) {
-                // Utilise notre interaction personnalisée sans Ripple
                 Modifier.muscuClickable(onClick = onClick)
             } else Modifier
         )
