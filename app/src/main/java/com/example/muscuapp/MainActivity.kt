@@ -6,6 +6,7 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import android.content.Intent
 import androidx.compose.animation.*
@@ -26,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -38,6 +40,7 @@ import com.example.muscuapp.ui.components.MuscuCard
 import com.example.muscuapp.ui.screens.*
 import com.example.muscuapp.ui.theme.MuscuTheme
 import com.example.muscuapp.ui.theme.MuscuAppTheme
+import com.example.muscuapp.ui.viewmodel.ExerciseViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -72,10 +75,13 @@ class MainActivity : ComponentActivity() {
         }
         
         setContent {
-            MuscuAppTheme {
+            val viewModel: ExerciseViewModel = hiltViewModel()
+            val themeMode by viewModel.themeMode.collectAsState()
+            
+            MuscuAppTheme(themeMode = themeMode) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
+                    color = MuscuTheme.colors.background
                 ) {
                     val navController = rememberNavController()
                     Box(modifier = Modifier.fillMaxSize()) {

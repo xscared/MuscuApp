@@ -19,6 +19,8 @@ import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
 
+import com.example.muscuapp.ui.components.MuscuTopBar
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatsScreen(
@@ -44,13 +46,10 @@ fun StatsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Statistiques & Progrès") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Retour")
-                    }
-                }
+            MuscuTopBar(
+                title = "Statistiques & Progrès",
+                navigationIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                onNavigationClick = onBack
             )
         }
     ) { paddingValues ->

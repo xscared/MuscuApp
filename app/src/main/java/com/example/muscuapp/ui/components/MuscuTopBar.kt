@@ -23,6 +23,7 @@ fun MuscuTopBar(
         modifier = Modifier
             .fillMaxWidth()
             .background(MuscuTheme.colors.background)
+            .statusBarsPadding()
     ) {
         Row(
             modifier = Modifier

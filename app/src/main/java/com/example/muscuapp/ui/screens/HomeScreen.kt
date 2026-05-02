@@ -25,6 +25,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.muscuapp.data.local.WorkoutSessionEntity
 import com.example.muscuapp.data.local.TemplateWithExercises
 import com.example.muscuapp.data.local.WorkoutWithExercisesAndSets
+import com.example.muscuapp.data.prefs.ThemeMode
 import com.example.muscuapp.data.prefs.WeightUnit
 import com.example.muscuapp.ui.components.MuscuTopBar
 import com.example.muscuapp.ui.components.MuscuWorkoutItem
@@ -46,6 +47,7 @@ fun HomeScreen(
     val templates by viewModel.templates.collectAsState(initial = emptyList())
     val streakCount by viewModel.streakCount.collectAsState()
     val weightUnit by viewModel.weightUnit.collectAsState()
+    val themeMode by viewModel.themeMode.collectAsState()
     val context = LocalContext.current
     
     var showTimer by remember { mutableStateOf(false) }
@@ -97,6 +99,22 @@ fun HomeScreen(
                             expanded = showSettingsMenu,
                             onDismissRequest = { showSettingsMenu = false }
                         ) {
+                            DropdownMenuItem(
+                                text = { Text("Thème : ${when(themeMode) {
+                                    ThemeMode.LIGHT -> "Clair"
+                                    ThemeMode.DARK -> "Sombre"
+                                    ThemeMode.SYSTEM -> "Système"
+                                }}") },
+                                onClick = { 
+                                    val nextMode = when(themeMode) {
+                                        ThemeMode.SYSTEM -> ThemeMode.LIGHT
+                                        ThemeMode.LIGHT -> ThemeMode.DARK
+                                        ThemeMode.DARK -> ThemeMode.SYSTEM
+                                    }
+                                    viewModel.setThemeMode(nextMode)
+                                    showSettingsMenu = false 
+                                }
+                            )
                             DropdownMenuItem(
                                 text = { Text("Unité : ${if (weightUnit == WeightUnit.KG) "KG" else "LBS"}") },
                                 onClick = { 
