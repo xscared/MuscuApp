@@ -19,6 +19,8 @@ import com.example.muscuapp.data.prefs.ThemeMode
 @Composable
 fun MuscuAppTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
+    hapticEnabled: Boolean = true,
+    hapticIntensity: Float = 1.0f,
     content: @Composable () -> Unit
 ) {
     val darkTheme = when (themeMode) {
@@ -49,7 +51,8 @@ fun MuscuAppTheme(
     CompositionLocalProvider(
         LocalMuscuColors provides muscuColors,
         LocalMuscuTypography provides DefaultMuscuTypography,
-        LocalMuscuSpacing provides MuscuSpacing()
+        LocalMuscuSpacing provides MuscuSpacing(),
+        LocalHapticSettings provides HapticSettings(enabled = hapticEnabled, intensity = hapticIntensity)
     ) {
         content()
     }

@@ -15,7 +15,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.core.app.NotificationCompat
 import com.example.muscuapp.MainActivity
 import com.example.muscuapp.R
+import com.example.muscuapp.data.prefs.UserPrefs
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
 
 class WorkoutTimerService : Service() {
 
@@ -27,6 +29,7 @@ class WorkoutTimerService : Service() {
         val currentSessionId = mutableLongStateOf(-1L)
     }
 
+    private lateinit var userPrefs: UserPrefs
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var timerJob: Job? = null
 
@@ -36,6 +39,7 @@ class WorkoutTimerService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        userPrefs = UserPrefs(this)
         createNotificationChannel()
 
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
@@ -132,15 +136,47 @@ class WorkoutTimerService : Service() {
 
     private fun playAlarm() {
         isAlarmPlaying.value = true
-        val alarmUri: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
 
-        ringtone = RingtoneManager.getRingtone(applicationContext, alarmUri)
-        ringtone?.audioAttributes = AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_ALARM)
-            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-            .build()
-        ringtone?.play()
+        serviceScope.launch {
+            val customAlarmUri = userPrefs.alarmSound.first()
+            val hapticEnabled = userPrefs.hapticEnabled.first()
+            val hapticIntensity = userPrefs.hapticIntensity.first()
+
+            val alarmUri: Uri = if (customAlarmUri != null) {
+                Uri.parse(customAlarmUri)
+            } else {
+                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                    ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+            }
+
+            ringtone = RingtoneManager.getRingtone(applicationContext, alarmUri)
+            ringtone?.audioAttributes = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+            ringtone?.play()
+
+            if (hapticEnabled && hapticIntensity > 0f) {
+                val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    (getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator
+                } else {
+                    getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+                }
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    val amplitude = (hapticIntensity * 255).toInt().coerceIn(1, 255)
+                    vibrator.vibrate(
+                        VibrationEffect.createWaveform(
+                            longArrayOf(0, 500, 500),
+                            intArrayOf(0, amplitude, 0),
+                            0
+                        )
+                    )
+                } else {
+                    vibrator.vibrate(longArrayOf(0, 500, 500), 0)
+                }
+            }
+        }
 
         val intent = Intent(
             Intent.ACTION_VIEW,

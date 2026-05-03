@@ -15,6 +15,7 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
+import com.example.muscuapp.ui.theme.LocalHapticSettings
 
 /**
  * Un modificateur personnalisé qui remplace le Ripple de Material.
@@ -28,6 +29,7 @@ fun Modifier.muscuClickable(
     onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit
 ): Modifier = composed {
+    val hapticSettings = LocalHapticSettings.current
     val interactionSource = remember { MutableInteractionSource() }
     val view = LocalView.current
     var isPressed by remember { mutableStateOf(false) }
@@ -58,7 +60,9 @@ fun Modifier.muscuClickable(
                     awaitFirstDown(false)
                     isPressed = true
                     // Petit retour haptique au toucher
-                    view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                    if (hapticSettings.enabled) {
+                        view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                    }
                     
                     waitForUpOrCancellation()
                     isPressed = false
@@ -71,13 +75,17 @@ fun Modifier.muscuClickable(
             enabled = enabled,
             onLongClick = onLongClick?.let { 
                 {
-                    view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                    if (hapticSettings.enabled) {
+                        view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                    }
                     it()
                 }
             },
             onClick = {
                 // Retour haptique plus sec au clic final
-                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                if (hapticSettings.enabled) {
+                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                }
                 onClick()
             }
         )

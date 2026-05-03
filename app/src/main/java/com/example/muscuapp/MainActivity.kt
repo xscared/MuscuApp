@@ -77,8 +77,14 @@ class MainActivity : ComponentActivity() {
         setContent {
             val viewModel: ExerciseViewModel = hiltViewModel()
             val themeMode by viewModel.themeMode.collectAsState()
+            val hapticEnabled by viewModel.hapticEnabled.collectAsState()
+            val hapticIntensity by viewModel.hapticIntensity.collectAsState()
             
-            MuscuAppTheme(themeMode = themeMode) {
+            MuscuAppTheme(
+                themeMode = themeMode,
+                hapticEnabled = hapticEnabled,
+                hapticIntensity = hapticIntensity
+            ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MuscuTheme.colors.background

@@ -40,6 +40,9 @@ fun HomeScreen(
     val templates by viewModel.templates.collectAsState(initial = emptyList())
     val weightUnit by viewModel.weightUnit.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
+    val hapticEnabled by viewModel.hapticEnabled.collectAsState()
+    val hapticIntensity by viewModel.hapticIntensity.collectAsState()
+    val alarmSound by viewModel.alarmSound.collectAsState()
     val context = LocalContext.current
     
     var showAddSheet by remember { mutableStateOf(false) }
@@ -66,6 +69,13 @@ fun HomeScreen(
             viewModel.importBackup(uri) { success ->
                 Toast.makeText(context, if (success) "Sauvegarde importée" else "Erreur d'importation", Toast.LENGTH_SHORT).show()
             }
+        }
+    }
+
+    val alarmPickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val uri = result.data?.getParcelableExtra<android.net.Uri>(android.media.RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+            viewModel.setAlarmSound(uri?.toString())
         }
     }
 
@@ -153,9 +163,9 @@ fun HomeScreen(
     ) {
         MuscuActionItem(
             label = "Thème : ${when(themeMode) {
+                ThemeMode.SYSTEM -> "Système"
                 ThemeMode.LIGHT -> "Clair"
                 ThemeMode.DARK -> "Sombre"
-                ThemeMode.SYSTEM -> "Système"
             }}",
             icon = Icons.Default.Palette,
             onClick = {
@@ -167,6 +177,47 @@ fun HomeScreen(
                 viewModel.setThemeMode(nextMode)
             }
         )
+        
+        MuscuActionItem(
+            label = "Retour Haptique : ${if (hapticEnabled) "ON" else "OFF"}",
+            icon = if (hapticEnabled) Icons.Default.Vibration else Icons.Default.Smartphone,
+            onClick = { viewModel.setHapticEnabled(!hapticEnabled) }
+        )
+
+        if (hapticEnabled) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Text(
+                    "Intensité : ${(hapticIntensity * 100).toInt()}%",
+                    style = MuscuTheme.typography.labelSmall,
+                    color = MuscuTheme.colors.textSecondary
+                )
+                Slider(
+                    value = hapticIntensity,
+                    onValueChange = { viewModel.setHapticIntensity(it) },
+                    valueRange = 0f..1f,
+                    colors = SliderDefaults.colors(
+                        thumbColor = MuscuTheme.colors.primary,
+                        activeTrackColor = MuscuTheme.colors.primary
+                    )
+                )
+            }
+        }
+
+        MuscuActionItem(
+            label = "Son de l'alarme",
+            icon = Icons.Default.MusicNote,
+            onClick = {
+                val intent = Intent(android.media.RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+                    putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TYPE, android.media.RingtoneManager.TYPE_ALARM)
+                    putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TITLE, "Choisir une alarme")
+                    putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, alarmSound?.let { android.net.Uri.parse(it) })
+                    putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                    putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+                }
+                alarmPickerLauncher.launch(intent)
+            }
+        )
+
         MuscuActionItem(
             label = "Unité : ${if (weightUnit == WeightUnit.KG) "KG" else "LBS"}",
             icon = Icons.Default.Straighten,

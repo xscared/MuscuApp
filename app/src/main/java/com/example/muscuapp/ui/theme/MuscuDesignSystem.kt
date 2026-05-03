@@ -130,6 +130,14 @@ val LocalMuscuColors = staticCompositionLocalOf { DarkMuscuColors }
 val LocalMuscuTypography = staticCompositionLocalOf { DefaultMuscuTypography }
 val LocalMuscuSpacing = staticCompositionLocalOf { MuscuSpacing() }
 
+@Immutable
+data class HapticSettings(
+    val enabled: Boolean = true,
+    val intensity: Float = 1.0f
+)
+
+val LocalHapticSettings = staticCompositionLocalOf { HapticSettings() }
+
 object MuscuTheme {
     val colors: MuscuColors
         @Composable
