@@ -89,7 +89,16 @@ fun LiveWorkoutScreen(
             if (workout == null) {
                 CircularProgressIndicator(Modifier.align(Alignment.Center), color = MuscuTheme.colors.primary)
             } else {
-                LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 80.dp)) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        top = MuscuTheme.spacing.medium,
+                        bottom = 120.dp, // Plus d'espace au fond pour éviter les chevauchements
+                        start = MuscuTheme.spacing.small,
+                        end = MuscuTheme.spacing.small
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(MuscuTheme.spacing.small)
+                ) {
                     item {
                         Text(
                             text = "DURÉE : ${formatElapsedTime(timeElapsed)}",
@@ -98,9 +107,13 @@ fun LiveWorkoutScreen(
                             color = MuscuTheme.colors.primary
                         )
                     }
-                    items(workout.exercises.sortedBy { it.exercise.order }) { exerciseWithSets ->
+                    items(
+                        items = workout.exercises.sortedBy { it.exercise.order },
+                        key = { it.exercise.id }
+                    ) { exerciseWithSets ->
                         LiveExerciseCard(
                             exerciseWithSets = exerciseWithSets,
+                            modifier = Modifier.padding(horizontal = MuscuTheme.spacing.small),
                             onToggleSet = { set, completed ->
                                 viewModel.toggleSetCompletion(set, completed)
                                 if (completed) {
@@ -117,6 +130,10 @@ fun LiveWorkoutScreen(
                                 viewModel.deleteSet(set)
                             }
                         )
+                    }
+                    // Spacer final pour assurer que le dernier exo soit bien dégagé
+                    item {
+                        Spacer(modifier = Modifier.height(20.dp))
                     }
                 }
             }
@@ -221,46 +238,76 @@ fun LiveWorkoutScreen(
 @Composable
 fun LiveExerciseCard(
     exerciseWithSets: ExerciseWithSets,
+    modifier: Modifier = Modifier,
     onToggleSet: (ExerciseSetEntity, Boolean) -> Unit,
     onUpdateSet: (ExerciseSetEntity) -> Unit,
     onAddWarmup: () -> Unit,
     onDeleteWarmup: (ExerciseSetEntity) -> Unit
 ) {
     MuscuCard(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)
+        modifier = modifier.fillMaxWidth()
     ) {
         Column {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f) // Prend tout l'espace restant sans pousser le bouton
+                ) {
                     Box(
-                        modifier = Modifier.size(8.dp).clip(CircleShape).background(MuscuTheme.colors.primary)
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(MuscuTheme.colors.primary)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        exerciseWithSets.exercise.name,
+                        exerciseWithSets.exercise.name.uppercase(),
                         style = MuscuTheme.typography.titleMedium,
-                        color = MuscuTheme.colors.textPrimary
+                        color = MuscuTheme.colors.textPrimary,
+                        fontWeight = FontWeight.Black,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
                 }
-                TextButton(onClick = onAddWarmup) {
-                    Text("+ Échauffement", style = MuscuTheme.typography.labelSmall, color = MuscuTheme.colors.primary)
+                
+                // Bouton d'ajout d'échauffement explicite
+                TextButton(
+                    onClick = onAddWarmup,
+                    contentPadding = PaddingValues(horizontal = 8.dp)
+                ) {
+                    Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp), tint = MuscuTheme.colors.primary)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        "ÉCHAUFF.",
+                        style = MuscuTheme.typography.labelSmall,
+                        color = MuscuTheme.colors.primary
+                    )
                 }
             }
             
             Spacer(modifier = Modifier.height(16.dp))
             
             Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("SÉRIE", modifier = Modifier.weight(1f), style = MuscuTheme.typography.labelSmall, color = MuscuTheme.colors.textSecondary)
+                Text("SÉRIE", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, style = MuscuTheme.typography.labelSmall, color = MuscuTheme.colors.textSecondary)
                 Text("POIDS (KG)", modifier = Modifier.weight(1.5f), textAlign = TextAlign.Center, style = MuscuTheme.typography.labelSmall, color = MuscuTheme.colors.textSecondary)
                 Text("REPS", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, style = MuscuTheme.typography.labelSmall, color = MuscuTheme.colors.textSecondary)
                 Spacer(modifier = Modifier.width(48.dp))
             }
 
-            val sortedSets = exerciseWithSets.sets.sortedWith(compareBy<ExerciseSetEntity> { !it.isWarmup }.thenBy { it.timestamp })
+            val sortedSets = exerciseWithSets.sets.sortedWith(
+                compareBy<ExerciseSetEntity> { !it.isWarmup }
+                    .thenBy { it.timestamp }
+            )
             
-            sortedSets.forEachIndexed { index, set ->
+            var regularSetCount = 0
+            sortedSets.forEach { set ->
+                val displayIndex = if (set.isWarmup) -1 else ++regularSetCount
                 LiveSetRow(
-                    index = index,
+                    index = displayIndex,
                     set = set,
                     onToggle = { onToggleSet(set, it) },
                     onUpdate = onUpdateSet,
@@ -273,7 +320,7 @@ fun LiveExerciseCard(
 
 @Composable
 fun LiveSetRow(
-    index: Int,
+    index: Int, // -1 pour échauffement, sinon 1, 2, 3...
     set: ExerciseSetEntity,
     onToggle: (Boolean) -> Unit,
     onUpdate: (ExerciseSetEntity) -> Unit,
@@ -285,26 +332,38 @@ fun LiveSetRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(vertical = 2.dp)
             .height(56.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(
-                if (set.isCompleted) MuscuTheme.colors.success.copy(alpha = 0.1f)
-                else if (set.isWarmup) Color(0xFFFF9800).copy(alpha = 0.1f)
-                else Color.Transparent
+                when {
+                    set.isCompleted -> MuscuTheme.colors.success.copy(alpha = 0.15f)
+                    set.isWarmup -> MuscuTheme.colors.secondary.copy(alpha = 0.1f)
+                    else -> Color.Transparent
+                }
             ),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
             if (set.isWarmup) {
-                Surface(color = Color(0xFFFF9800), shape = CircleShape) {
-                    Text("E", color = Color.White, modifier = Modifier.padding(horizontal = 6.dp), style = MuscuTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                Surface(
+                    color = MuscuTheme.colors.secondary.copy(alpha = 0.8f),
+                    shape = CircleShape
+                ) {
+                    Text(
+                        "E", 
+                        color = Color.White, 
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp), 
+                        style = MuscuTheme.typography.labelSmall, 
+                        fontWeight = FontWeight.Black
+                    )
                 }
             } else {
                 Text(
-                    text = "${index + 1}", 
+                    text = "$index", 
                     style = MuscuTheme.typography.bodyLarge,
                     color = if (set.isCompleted) MuscuTheme.colors.success else MuscuTheme.colors.textPrimary,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Black
                 )
             }
         }
