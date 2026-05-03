@@ -6,6 +6,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -40,7 +41,7 @@ fun HomeScreen(
     val themeMode by viewModel.themeMode.collectAsState()
     val context = LocalContext.current
     
-    var showAddDialog by remember { mutableStateOf(false) }
+    var showAddSheet by remember { mutableStateOf(false) }
     var showTemplateDialog by remember { mutableStateOf(false) }
     var newWorkoutTitle by remember { mutableStateOf("") }
     
@@ -64,12 +65,9 @@ fun HomeScreen(
 
     MuscuScreen(
         title = "Mes Séances",
-        actions = {
-            // Plus d'icônes en haut à droite ici
-        },
         bottomBar = {
             Row(
-                modifier = Modifier.fillMaxSize().muscuClickable { showAddDialog = true },
+                modifier = Modifier.fillMaxSize().muscuClickable { showAddSheet = true },
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
@@ -83,7 +81,6 @@ fun HomeScreen(
             }
         }
     ) {
-        // --- DASHBOARD DE NAVIGATION ---
         item {
             Row(
                 modifier = Modifier
@@ -166,21 +163,6 @@ fun HomeScreen(
             onClick = { viewModel.toggleWeightUnit() }
         )
         MuscuActionItem(
-            label = "Partager en CSV",
-            icon = Icons.Default.Share,
-            onClick = {
-                showSettingsSheet = false
-                viewModel.exportCsv { csvData ->
-                    val intent = Intent(Intent.ACTION_SEND).apply {
-                        type = "text/csv"
-                        putExtra(Intent.EXTRA_TEXT, csvData)
-                        putExtra(Intent.EXTRA_SUBJECT, "Export MuscuApp")
-                    }
-                    context.startActivity(Intent.createChooser(intent, "Exporter mes données"))
-                }
-            }
-        )
-        MuscuActionItem(
             label = "Sauvegarder (JSON)",
             icon = Icons.Default.CloudUpload,
             onClick = {
@@ -198,40 +180,52 @@ fun HomeScreen(
         )
     }
 
-    if (showAddDialog) {
-        AlertDialog(
-            onDismissRequest = { showAddDialog = false },
-            title = { Text("NOUVELLE SÉANCE", style = MuscuTheme.typography.titleMedium) },
-            text = {
-                OutlinedTextField(
-                    value = newWorkoutTitle,
-                    onValueChange = { newWorkoutTitle = it },
-                    label = { Text("NOM DE LA SÉANCE") },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MuscuTheme.colors.primary,
-                        unfocusedBorderColor = MuscuTheme.colors.divider,
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent
-                    )
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (newWorkoutTitle.isNotBlank()) {
-                            viewModel.createWorkout(newWorkoutTitle) { id ->
-                                onWorkoutClick(id)
-                            }
-                            showAddDialog = false
-                            newWorkoutTitle = ""
+    // --- CUSTOM ADD WORKOUT SHEET (Replaces AlertDialog) ---
+    MuscuActionSheet(
+        visible = showAddSheet,
+        onDismiss = { showAddSheet = false },
+        title = "Nouvelle Séance"
+    ) {
+        Column(modifier = Modifier.padding(bottom = 16.dp)) {
+            MuscuTextField(
+                value = newWorkoutTitle,
+                onValueChange = { newWorkoutTitle = it },
+                placeholder = "NOM DE LA SÉANCE (EX: PUSH DAY)"
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            MuscuButton(
+                text = "CRÉER LA SÉANCE",
+                onClick = {
+                    if (newWorkoutTitle.isNotBlank()) {
+                        viewModel.createWorkout(newWorkoutTitle) { id ->
+                            onWorkoutClick(id)
                         }
+                        showAddSheet = false
+                        newWorkoutTitle = ""
                     }
-                ) { Text("CRÉER", color = MuscuTheme.colors.primary, fontWeight = FontWeight.Black) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddDialog = false }) { Text("ANNULER", color = MuscuTheme.colors.textSecondary) }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+
+    if (showTemplateDialog) {
+        MuscuActionSheet(
+            visible = showTemplateDialog,
+            onDismiss = { showTemplateDialog = false },
+            title = "Démarrer un modèle"
+        ) {
+            templates.forEach { template ->
+                MuscuActionItem(
+                    label = template.template.name,
+                    icon = Icons.Default.ContentPaste,
+                    onClick = {
+                        viewModel.createWorkoutFromTemplate(template)
+                        showTemplateDialog = false
+                    }
+                )
             }
-        )
+        }
     }
 }
 
