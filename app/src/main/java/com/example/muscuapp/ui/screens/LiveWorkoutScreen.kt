@@ -56,7 +56,7 @@ fun LiveWorkoutScreen(
     
     var timeElapsed by remember { mutableStateOf(0L) }
     var showFinishSummary by remember { mutableStateOf(false) }
-    
+
     var showRestTimeSelector by remember { mutableStateOf(false) }
 
     LaunchedEffect(workout?.session?.startTime) {
@@ -140,20 +140,20 @@ fun LiveWorkoutScreen(
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(
-                            "Temps de repos", 
+                            "Temps de repos",
                             style = MuscuTheme.typography.titleMedium,
                             color = MuscuTheme.colors.primary
                         )
-                        
+
                         if (!isCustom) {
                             MuscuButton(text = "1 MIN", onClick = { startTimer(context, 60, sessionId); showRestTimeSelector = false }, modifier = Modifier.fillMaxWidth())
                             MuscuButton(text = "1 MIN 30S", onClick = { startTimer(context, 90, sessionId); showRestTimeSelector = false }, modifier = Modifier.fillMaxWidth())
                             MuscuButton(text = "2 MIN", onClick = { startTimer(context, 120, sessionId); showRestTimeSelector = false }, modifier = Modifier.fillMaxWidth())
                             TextButton(
-                                onClick = { isCustom = true }, 
+                                onClick = { isCustom = true },
                                 modifier = Modifier.fillMaxWidth()
-                            ) { 
-                                Text("PERSONNALISÉ", color = MuscuTheme.colors.textSecondary) 
+                            ) {
+                                Text("PERSONNALISÉ", color = MuscuTheme.colors.textSecondary)
                             }
                         } else {
                             MuscuTextField(
@@ -164,22 +164,22 @@ fun LiveWorkoutScreen(
                                     .fillMaxWidth()
                                     .focusRequester(focusRequester)
                             )
-                            
+
                             LaunchedEffect(Unit) {
                                 focusRequester.requestFocus()
                             }
-                            
+
                             MuscuButton(
-                                text = "DÉMARRER", 
-                                onClick = { 
+                                text = "DÉMARRER",
+                                onClick = {
                                     val secs = customTime.text.toIntOrNull() ?: 60
                                     startTimer(context, secs, sessionId)
-                                    showRestTimeSelector = false 
+                                    showRestTimeSelector = false
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
-                        
+
                         TextButton(
                             onClick = { showRestTimeSelector = false },
                             modifier = Modifier.align(Alignment.End)
@@ -192,7 +192,7 @@ fun LiveWorkoutScreen(
         }
 
         if (showFinishSummary && workout != null) {
-            val totalVolume = workout.exercises.sumOf { ex -> 
+            val totalVolume = workout.exercises.sumOf { ex ->
                 ex.sets.filter { it.isCompleted }.sumOf { (it.weight * it.reps).toDouble() }
             }
             val setsDone = workout.exercises.sumOf { ex -> ex.sets.count { it.isCompleted } }
@@ -237,8 +237,8 @@ fun LiveExerciseCard(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        exerciseWithSets.exercise.name, 
-                        style = MuscuTheme.typography.titleMedium, 
+                        exerciseWithSets.exercise.name,
+                        style = MuscuTheme.typography.titleMedium,
                         color = MuscuTheme.colors.textPrimary
                     )
                 }
@@ -288,7 +288,7 @@ fun LiveSetRow(
             .height(56.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(
-                if (set.isCompleted) MuscuTheme.colors.success.copy(alpha = 0.1f) 
+                if (set.isCompleted) MuscuTheme.colors.success.copy(alpha = 0.1f)
                 else if (set.isWarmup) Color(0xFFFF9800).copy(alpha = 0.1f)
                 else Color.Transparent
             ),
@@ -302,7 +302,7 @@ fun LiveSetRow(
             } else {
                 Text(
                     text = "${index + 1}", 
-                    style = MuscuTheme.typography.bodyLarge, 
+                    style = MuscuTheme.typography.bodyLarge,
                     color = if (set.isCompleted) MuscuTheme.colors.success else MuscuTheme.colors.textPrimary,
                     fontWeight = FontWeight.Bold
                 )

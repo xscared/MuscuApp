@@ -74,16 +74,16 @@ fun AddExerciseScreen(
 
     val categories = listOf("Pectoraux", "Dos", "Jambes", "Épaules", "Bras", "Abdos", "Autre")
     val exerciseSuggestions = listOf(
-        "Développé couché", "Squat à la barre", "Soulevé de terre", "Tractions", 
-        "Pompes", "Fentes", "Curls haltères", "Extension triceps", 
+        "Développé couché", "Squat à la barre", "Soulevé de terre", "Tractions",
+        "Pompes", "Fentes", "Curls haltères", "Extension triceps",
         "Rowing barre", "Développé militaire", "Planche", "Crunchs"
     )
-    
+
     var expanded by remember { mutableStateOf(false) }
     var suggestionExpanded by remember { mutableStateOf(false) }
 
     val filteredSuggestions = remember(name) {
-        if (name.isEmpty()) emptyList() 
+        if (name.isEmpty()) emptyList()
         else exerciseSuggestions.filter { it.contains(name, ignoreCase = true) && it != name }
     }
 
@@ -108,8 +108,8 @@ fun AddExerciseScreen(
             // Catégorie
             Column(verticalArrangement = Arrangement.spacedBy(MuscuTheme.spacing.extraSmall)) {
                 Text(
-                    "Catégorie", 
-                    style = MuscuTheme.typography.bodyMedium, 
+                    "Catégorie",
+                    style = MuscuTheme.typography.bodyMedium,
                     color = MuscuTheme.colors.textSecondary
                 )
                 Box(modifier = Modifier.fillMaxWidth()) {
@@ -132,13 +132,13 @@ fun AddExerciseScreen(
                         )
                     )
                     DropdownMenu(
-                        expanded = expanded, 
+                        expanded = expanded,
                         onDismissRequest = { expanded = false },
                         modifier = Modifier.background(MuscuTheme.colors.surface)
                     ) {
                         categories.forEach { cat ->
                             DropdownMenuItem(
-                                text = { Text(cat, color = MuscuTheme.colors.textPrimary) }, 
+                                text = { Text(cat, color = MuscuTheme.colors.textPrimary) },
                                 onClick = { category = cat; expanded = false }
                             )
                         }
@@ -149,14 +149,14 @@ fun AddExerciseScreen(
             // Nom de l'exercice avec suggestions
             Column(verticalArrangement = Arrangement.spacedBy(MuscuTheme.spacing.extraSmall)) {
                 Text(
-                    "Nom de l'exercice", 
-                    style = MuscuTheme.typography.bodyMedium, 
+                    "Nom de l'exercice",
+                    style = MuscuTheme.typography.bodyMedium,
                     color = MuscuTheme.colors.textSecondary
                 )
                 Box(modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
                         value = name,
-                        onValueChange = { 
+                        onValueChange = {
                             name = it
                             suggestionExpanded = filteredSuggestions.isNotEmpty()
                         },
@@ -187,11 +187,11 @@ fun AddExerciseScreen(
 
             // Section Séries
             Text(
-                "Séries", 
-                style = MuscuTheme.typography.titleMedium, 
+                "Séries",
+                style = MuscuTheme.typography.titleMedium,
                 color = MuscuTheme.colors.textPrimary
             )
-            
+
             Column(verticalArrangement = Arrangement.spacedBy(MuscuTheme.spacing.small)) {
                 setDrafts.forEachIndexed { index, draft ->
                     Row(
@@ -254,7 +254,7 @@ fun AddExerciseScreen(
                         }
                     }
                 }
-                
+
                 Button(
                     onClick = {
                         val lastSet = setDrafts.lastOrNull()
@@ -266,7 +266,7 @@ fun AddExerciseScreen(
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MuscuTheme.colors.secondary.copy(alpha = 0.1f), 
+                        containerColor = MuscuTheme.colors.secondary.copy(alpha = 0.1f),
                         contentColor = MuscuTheme.colors.secondary
                     ),
                     shape = RoundedCornerShape(8.dp)
@@ -279,8 +279,8 @@ fun AddExerciseScreen(
 
             Column(verticalArrangement = Arrangement.spacedBy(MuscuTheme.spacing.extraSmall)) {
                 Text(
-                    "Notes (optionnel)", 
-                    style = MuscuTheme.typography.bodyMedium, 
+                    "Notes (optionnel)",
+                    style = MuscuTheme.typography.bodyMedium,
                     color = MuscuTheme.colors.textSecondary
                 )
                 OutlinedTextField(
@@ -299,7 +299,7 @@ fun AddExerciseScreen(
             }
 
             Spacer(modifier = Modifier.height(MuscuTheme.spacing.medium))
-            
+
             MuscuButton(
                 text = if (exerciseId == null) "Créer l'exercice" else "Sauvegarder",
                 onClick = {
@@ -311,7 +311,7 @@ fun AddExerciseScreen(
                                 isWarmup = draft.isWarmup
                             )
                         }
-                        
+
                         if (exerciseId == null) {
                             viewModel.addExerciseWithDetailedSets(sessionId, name, category, note, parsedSets)
                         } else {
