@@ -15,6 +15,7 @@ import com.example.muscuapp.ui.theme.MuscuTheme
 fun MuscuCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
     borderColor: Color = Color.Transparent,
     content: @Composable () -> Unit
 ) {
@@ -31,7 +32,10 @@ fun MuscuCard(
         )
         .then(
             if (onClick != null) {
-                Modifier.muscuClickable(onClick = onClick)
+                Modifier.muscuClickable(
+                    onClick = onClick,
+                    onLongClick = onLongClick
+                )
             } else Modifier
         )
 

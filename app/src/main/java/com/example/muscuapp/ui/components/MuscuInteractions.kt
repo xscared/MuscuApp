@@ -3,7 +3,8 @@ package com.example.muscuapp.ui.components
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -21,8 +22,10 @@ import androidx.compose.ui.platform.LocalView
  * - Retour haptique (vibration légère)
  * - Pas de vaguelette visuelle Google
  */
+@OptIn(ExperimentalFoundationApi::class)
 fun Modifier.muscuClickable(
     enabled: Boolean = true,
+    onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit
 ): Modifier = composed {
     val interactionSource = remember { MutableInteractionSource() }
@@ -62,10 +65,16 @@ fun Modifier.muscuClickable(
                 }
             }
         }
-        .clickable(
+        .combinedClickable(
             interactionSource = interactionSource,
             indication = null, // Supprime le Ripple Material
             enabled = enabled,
+            onLongClick = onLongClick?.let { 
+                {
+                    view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                    it()
+                }
+            },
             onClick = {
                 // Retour haptique plus sec au clic final
                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)

@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,6 +24,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.muscuapp.data.local.WorkoutSessionEntity
 import com.example.muscuapp.data.local.WorkoutWithExercisesAndSets
 import com.example.muscuapp.ui.components.*
 import com.example.muscuapp.ui.theme.MuscuTheme
@@ -40,6 +42,11 @@ fun CalendarScreen(
     
     var currentMonth by remember { mutableStateOf(Calendar.getInstance()) }
     var selectedDate by remember { mutableStateOf(Calendar.getInstance()) }
+
+    var selectedWorkoutForActions by remember { mutableStateOf<WorkoutWithExercisesAndSets?>(null) }
+    var showWorkoutActions by remember { mutableStateOf(false) }
+    var showRenameSheet by remember { mutableStateOf(false) }
+    var renameValue by remember { mutableStateOf("") }
 
     val monthFormatter = SimpleDateFormat("MMMM yyyy", Locale.getDefault())
     
@@ -202,9 +209,65 @@ fun CalendarScreen(
             items(workoutsOnSelectedDay) { workout ->
                 MuscuWorkoutItem(
                     workout = workout,
-                    onClick = { onWorkoutClick(workout.session.sessionId) }
+                    onClick = { onWorkoutClick(workout.session.sessionId) },
+                    onLongClick = {
+                        selectedWorkoutForActions = workout
+                        showWorkoutActions = true
+                    }
                 )
             }
+        }
+    }
+
+    // --- WORKOUT ACTIONS SHEET ---
+    MuscuActionSheet(
+        visible = showWorkoutActions,
+        onDismiss = { showWorkoutActions = false },
+        title = selectedWorkoutForActions?.session?.title?.uppercase() ?: "SÉANCE"
+    ) {
+        MuscuActionItem(
+            label = "RENOMMER",
+            icon = Icons.Default.Edit,
+            onClick = {
+                renameValue = selectedWorkoutForActions?.session?.title ?: ""
+                showWorkoutActions = false
+                showRenameSheet = true
+            }
+        )
+        MuscuActionItem(
+            label = "SUPPRIMER",
+            icon = Icons.Default.Delete,
+            color = MuscuTheme.colors.error,
+            onClick = {
+                selectedWorkoutForActions?.let { viewModel.deleteWorkout(it.session) }
+                showWorkoutActions = false
+            }
+        )
+    }
+
+    // --- RENAME SHEET ---
+    MuscuActionSheet(
+        visible = showRenameSheet,
+        onDismiss = { showRenameSheet = false },
+        title = "Renommer la séance"
+    ) {
+        Column(modifier = Modifier.padding(bottom = 16.dp)) {
+            MuscuTextField(
+                value = renameValue,
+                onValueChange = { renameValue = it },
+                placeholder = "NOUVEAU NOM"
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            MuscuButton(
+                text = "VALIDER",
+                onClick = {
+                    selectedWorkoutForActions?.let { 
+                        viewModel.renameWorkout(it.session, renameValue)
+                    }
+                    showRenameSheet = false
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }

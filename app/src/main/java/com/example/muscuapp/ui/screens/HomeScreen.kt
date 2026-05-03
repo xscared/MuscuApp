@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.muscuapp.data.local.WorkoutSessionEntity
+import com.example.muscuapp.data.local.WorkoutWithExercisesAndSets
 import com.example.muscuapp.data.prefs.WeightUnit
 import com.example.muscuapp.data.prefs.ThemeMode
 import com.example.muscuapp.ui.components.*
@@ -46,6 +47,11 @@ fun HomeScreen(
     var newWorkoutTitle by remember { mutableStateOf("") }
     
     var showSettingsSheet by remember { mutableStateOf(false) }
+    
+    var selectedWorkoutForActions by remember { mutableStateOf<WorkoutWithExercisesAndSets?>(null) }
+    var showWorkoutActions by remember { mutableStateOf(false) }
+    var showRenameSheet by remember { mutableStateOf(false) }
+    var renameValue by remember { mutableStateOf("") }
 
     val exportBackupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri != null) {
@@ -129,7 +135,11 @@ fun HomeScreen(
             items(workouts) { workout ->
                 MuscuWorkoutItem(
                     workout = workout,
-                    onClick = { onWorkoutClick(workout.session.sessionId) }
+                    onClick = { onWorkoutClick(workout.session.sessionId) },
+                    onLongClick = {
+                        selectedWorkoutForActions = workout
+                        showWorkoutActions = true
+                    }
                 )
             }
         }
@@ -225,6 +235,58 @@ fun HomeScreen(
                     }
                 )
             }
+        }
+    }
+
+    // --- WORKOUT ACTIONS SHEET ---
+    MuscuActionSheet(
+        visible = showWorkoutActions,
+        onDismiss = { showWorkoutActions = false },
+        title = selectedWorkoutForActions?.session?.title?.uppercase() ?: "SÉANCE"
+    ) {
+        MuscuActionItem(
+            label = "RENOMMER",
+            icon = Icons.Default.Edit,
+            onClick = {
+                renameValue = selectedWorkoutForActions?.session?.title ?: ""
+                showWorkoutActions = false
+                showRenameSheet = true
+            }
+        )
+        MuscuActionItem(
+            label = "SUPPRIMER",
+            icon = Icons.Default.Delete,
+            color = MuscuTheme.colors.error,
+            onClick = {
+                selectedWorkoutForActions?.let { viewModel.deleteWorkout(it.session) }
+                showWorkoutActions = false
+            }
+        )
+    }
+
+    // --- RENAME SHEET ---
+    MuscuActionSheet(
+        visible = showRenameSheet,
+        onDismiss = { showRenameSheet = false },
+        title = "Renommer la séance"
+    ) {
+        Column(modifier = Modifier.padding(bottom = 16.dp)) {
+            MuscuTextField(
+                value = renameValue,
+                onValueChange = { renameValue = it },
+                placeholder = "NOUVEAU NOM"
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            MuscuButton(
+                text = "VALIDER",
+                onClick = {
+                    selectedWorkoutForActions?.let { 
+                        viewModel.renameWorkout(it.session, renameValue)
+                    }
+                    showRenameSheet = false
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }

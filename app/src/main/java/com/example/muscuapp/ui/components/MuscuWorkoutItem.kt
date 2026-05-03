@@ -20,7 +20,8 @@ import java.util.*
 @Composable
 fun MuscuWorkoutItem(
     workout: WorkoutWithExercisesAndSets,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: () -> Unit = {}
 ) {
     val dateFormat = SimpleDateFormat("dd MMM", Locale.getDefault())
     
@@ -28,7 +29,8 @@ fun MuscuWorkoutItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = MuscuTheme.spacing.medium, vertical = MuscuTheme.spacing.small),
-        onClick = onClick
+        onClick = onClick,
+        onLongClick = onLongClick
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
