@@ -183,74 +183,82 @@ fun GlobalDraggableTimer(
     val currentSessionId = WorkoutTimerService.currentSessionId.longValue
     val context = androidx.compose.ui.platform.LocalContext.current
 
+    // Utilisation de rememberUpdatedState pour que le detectDragGestures (pointerInput(Unit))
+    // utilise toujours les dernières valeurs sans redémarrer le pointerInput.
+    val updatedX by rememberUpdatedState(currentOffsetX)
+    val updatedY by rememberUpdatedState(currentOffsetY)
+
     AnimatedVisibility(
         visible = isTimerRunning || isAlarmPlaying,
         enter = fadeIn() + scaleIn(),
         exit = fadeOut() + scaleOut()
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            MuscuCard(
-                borderColor = if (isAlarmPlaying) MuscuTheme.colors.error else Color.Transparent,
+            Box(
                 modifier = Modifier
-                    .offset { IntOffset(currentOffsetX.roundToInt(), currentOffsetY.roundToInt()) }
-                    .padding(16.dp)
+                    .offset { IntOffset(updatedX.roundToInt(), updatedY.roundToInt()) }
                     .align(Alignment.BottomCenter)
+                    .padding(16.dp)
                     .pointerInput(Unit) {
                         detectDragGestures { change, dragAmount ->
                             change.consume()
-                            onPositionChange(currentOffsetX + dragAmount.x, currentOffsetY + dragAmount.y)
+                            onPositionChange(updatedX + dragAmount.x, updatedY + dragAmount.y)
                         }
-                    },
-                onClick = {
-                    if (currentSessionId != -1L) {
-                        navController.navigate("live/$currentSessionId")
                     }
-                }
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Icon(
-                        imageVector = if (isAlarmPlaying) Icons.Default.NotificationsActive else Icons.Default.Timer, 
-                        contentDescription = null, 
-                        tint = if (isAlarmPlaying) MuscuTheme.colors.error else MuscuTheme.colors.primary
-                    )
-                    Column {
-                        Text(
-                            text = if (isAlarmPlaying) "FINI !" else "Repos", 
-                            style = MuscuTheme.typography.labelSmall,
-                            color = if (isAlarmPlaying) MuscuTheme.colors.error else MuscuTheme.colors.textSecondary
-                        )
-                        if (!isAlarmPlaying) {
-                            Text(
-                                String.format(Locale.getDefault(), "%02d:%02d", timerSeconds / 60, timerSeconds % 60),
-                                style = MuscuTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MuscuTheme.colors.primary
-                            )
-                        } else {
-                            Text(
-                                "STOP",
-                                style = MuscuTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MuscuTheme.colors.error
-                            )
+                MuscuCard(
+                    borderColor = if (isAlarmPlaying) MuscuTheme.colors.error else Color.Transparent,
+                    onClick = {
+                        if (currentSessionId != -1L) {
+                            navController.navigate("live/$currentSessionId")
                         }
                     }
-                    IconButton(
-                        onClick = { 
-                            val action = if (isAlarmPlaying) "STOP_ALARM" else "CANCEL_TIMER"
-                            context.startService(Intent(context, WorkoutTimerService::class.java).apply { this.action = action })
-                        },
-                        modifier = Modifier.size(32.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Close, 
-                            contentDescription = "Arrêter", 
-                            modifier = Modifier.size(20.dp),
-                            tint = if (isAlarmPlaying) MuscuTheme.colors.error else MuscuTheme.colors.textPrimary
+                            imageVector = if (isAlarmPlaying) Icons.Default.NotificationsActive else Icons.Default.Timer, 
+                            contentDescription = null, 
+                            tint = if (isAlarmPlaying) MuscuTheme.colors.error else MuscuTheme.colors.primary
                         )
+                        Column {
+                            Text(
+                                text = if (isAlarmPlaying) "FINI !" else "Repos", 
+                                style = MuscuTheme.typography.labelSmall,
+                                color = if (isAlarmPlaying) MuscuTheme.colors.error else MuscuTheme.colors.textSecondary
+                            )
+                            if (!isAlarmPlaying) {
+                                Text(
+                                    String.format(Locale.getDefault(), "%02d:%02d", timerSeconds / 60, timerSeconds % 60),
+                                    style = MuscuTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MuscuTheme.colors.primary
+                                )
+                            } else {
+                                Text(
+                                    "STOP",
+                                    style = MuscuTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MuscuTheme.colors.error
+                                )
+                            }
+                        }
+                        IconButton(
+                            onClick = { 
+                                val action = if (isAlarmPlaying) "STOP_ALARM" else "CANCEL_TIMER"
+                                context.startService(Intent(context, WorkoutTimerService::class.java).apply { this.action = action })
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close, 
+                                contentDescription = "Arrêter", 
+                                modifier = Modifier.size(20.dp),
+                                tint = if (isAlarmPlaying) MuscuTheme.colors.error else MuscuTheme.colors.textPrimary
+                            )
+                        }
                     }
                 }
             }
