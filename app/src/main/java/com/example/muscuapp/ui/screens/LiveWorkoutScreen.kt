@@ -331,6 +331,7 @@ fun LiveSetRow(
 ) {
     var weightText by remember(set.setId, set.weight) { mutableStateOf(set.weight.toString()) }
     var repsText by remember(set.setId, set.reps) { mutableStateOf(set.reps.toString()) }
+    var showDeleteConfirm by remember(set.setId) { mutableStateOf(false) }
 
     Row(
         modifier = Modifier
@@ -399,7 +400,7 @@ fun LiveSetRow(
             horizontalArrangement = Arrangement.End
         ) {
             if (onDelete != null) {
-                IconButton(onClick = onDelete, modifier = Modifier.size(40.dp)) {
+                IconButton(onClick = { showDeleteConfirm = true }, modifier = Modifier.size(40.dp)) {
                     Icon(Icons.Default.Delete, null, tint = MuscuTheme.colors.error, modifier = Modifier.size(20.dp))
                 }
             }
@@ -412,6 +413,31 @@ fun LiveSetRow(
                     modifier = Modifier.size(28.dp)
                 )
             }
+        }
+
+        if (showDeleteConfirm && onDelete != null) {
+            AlertDialog(
+                onDismissRequest = { showDeleteConfirm = false },
+                title = { Text("Supprimer la série ?") },
+                text = {
+                    Text("Cette action est irréversible.")
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showDeleteConfirm = false
+                            onDelete()
+                        }
+                    ) {
+                        Text("SUPPRIMER", color = MuscuTheme.colors.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteConfirm = false }) {
+                        Text("ANNULER")
+                    }
+                }
+            )
         }
     }
 }
