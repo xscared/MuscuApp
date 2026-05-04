@@ -301,18 +301,21 @@ fun LiveExerciseCard(
             val sortedSets = exerciseWithSets.sets.sortedWith(
                 compareBy<ExerciseSetEntity> { !it.isWarmup }
                     .thenBy { it.timestamp }
+                    .thenBy { it.setId }
             )
             
             var regularSetCount = 0
             sortedSets.forEach { set ->
                 val displayIndex = if (set.isWarmup) -1 else ++regularSetCount
-                LiveSetRow(
-                    index = displayIndex,
-                    set = set,
-                    onToggle = { onToggleSet(set, it) },
-                    onUpdate = onUpdateSet,
-                    onDelete = if (set.isWarmup) { { onDeleteWarmup(set) } } else null
-                )
+                key(set.setId) {
+                    LiveSetRow(
+                        index = displayIndex,
+                        set = set,
+                        onToggle = { onToggleSet(set, it) },
+                        onUpdate = onUpdateSet,
+                        onDelete = if (set.isWarmup) { { onDeleteWarmup(set) } } else null
+                    )
+                }
             }
         }
     }
@@ -326,8 +329,8 @@ fun LiveSetRow(
     onUpdate: (ExerciseSetEntity) -> Unit,
     onDelete: (() -> Unit)? = null
 ) {
-    var weightText by remember(set.weight) { mutableStateOf(set.weight.toString()) }
-    var repsText by remember(set.reps) { mutableStateOf(set.reps.toString()) }
+    var weightText by remember(set.setId, set.weight) { mutableStateOf(set.weight.toString()) }
+    var repsText by remember(set.setId, set.reps) { mutableStateOf(set.reps.toString()) }
 
     Row(
         modifier = Modifier
