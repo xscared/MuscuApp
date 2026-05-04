@@ -51,6 +51,9 @@ fun LiveWorkoutScreen(
     var showFinishSummary by remember { mutableStateOf(false) }
     
     var showRestTimeSelector by remember { mutableStateOf(false) }
+    
+    var showDeleteWarmupConfirm by remember { mutableStateOf(false) }
+    var warmupSetToDelete by remember { mutableStateOf<ExerciseSetEntity?>(null) }
 
     LaunchedEffect(workout?.session?.startTime) {
         val startTime = workout?.session?.startTime ?: System.currentTimeMillis()
@@ -111,7 +114,8 @@ fun LiveWorkoutScreen(
                                 viewModel.addWarmupSet(exerciseWithSets.exercise.id, 10, exerciseWithSets.exercise.weight * 0.4f)
                             },
                             onDeleteWarmup = { set ->
-                                viewModel.deleteSet(set)
+                                warmupSetToDelete = set
+                                showDeleteWarmupConfirm = true
                             }
                         )
                     }
@@ -212,6 +216,33 @@ fun LiveWorkoutScreen(
                     TextButton(onClick = { showFinishSummary = false }) {
                         Text("Continuer l'entraînement")
                     }
+                }
+            )
+        }
+
+        if (showDeleteWarmupConfirm && warmupSetToDelete != null) {
+            AlertDialog(
+                onDismissRequest = { 
+                    showDeleteWarmupConfirm = false
+                    warmupSetToDelete = null
+                },
+                title = { Text("Supprimer la série ?") },
+                text = { Text("Veux-tu vraiment supprimer cette série d'échauffement ?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.deleteSet(warmupSetToDelete!!)
+                            showDeleteWarmupConfirm = false
+                            warmupSetToDelete = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) { Text("Supprimer") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { 
+                        showDeleteWarmupConfirm = false 
+                        warmupSetToDelete = null
+                    }) { Text("Annuler") }
                 }
             )
         }
