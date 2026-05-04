@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.muscuapp.data.local.ExerciseEntity
 import com.example.muscuapp.ui.components.MuscuButton
+import com.example.muscuapp.ui.components.MuscuConfirmDialog
 import com.example.muscuapp.ui.components.MuscuTopBar
 import com.example.muscuapp.ui.theme.MuscuTheme
 import com.example.muscuapp.ui.viewmodel.ExerciseViewModel
@@ -49,8 +50,13 @@ fun WorkoutDetailScreen(
                 actions = {
                     if (workout != null) {
                         IconButton(onClick = { 
-                            if (!workout.session.isLive) viewModel.startLiveWorkout(sessionId)
-                            onLiveClick(sessionId) 
+                            if (workout.session.isLive) {
+                                onLiveClick(sessionId)
+                            } else {
+                                viewModel.startLiveWorkout(sessionId) {
+                                    onLiveClick(sessionId)
+                                }
+                            }
                         }) {
                             Icon(
                                 imageVector = Icons.Default.PlayArrow, 
@@ -147,31 +153,21 @@ fun WorkoutDetailScreen(
             }
         }
 
-        if (showDeleteConfirm && exerciseToDelete != null) {
-            AlertDialog(
-                onDismissRequest = { 
-                    showDeleteConfirm = false
-                    exerciseToDelete = null
-                },
-                title = { Text("Supprimer l'exercice ?") },
-                text = { Text("Voulez-vous vraiment supprimer '${exerciseToDelete!!.name}' ? Cette action est irréversible.") },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            viewModel.deleteExercise(exerciseToDelete!!)
-                            showDeleteConfirm = false
-                            exerciseToDelete = null
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                    ) { Text("Supprimer") }
-                },
-                dismissButton = {
-                    TextButton(onClick = { 
-                        showDeleteConfirm = false
-                        exerciseToDelete = null
-                    }) { Text("Annuler") }
-                }
-            )
-        }
+        MuscuConfirmDialog(
+            visible = showDeleteConfirm && exerciseToDelete != null,
+            title = "Supprimer l'exercice ?",
+            message = "Voulez-vous vraiment supprimer '${exerciseToDelete?.name ?: ""}' ? Cette action est irréversible.",
+            confirmText = "SUPPRIMER",
+            dismissText = "ANNULER",
+            onConfirm = {
+                exerciseToDelete?.let { viewModel.deleteExercise(it) }
+                showDeleteConfirm = false
+                exerciseToDelete = null
+            },
+            onDismiss = {
+                showDeleteConfirm = false
+                exerciseToDelete = null
+            }
+        )
     }
 }

@@ -87,7 +87,7 @@ class ExerciseViewModel @Inject constructor(
         }
     }
 
-    fun startLiveWorkout(sessionId: Long) {
+    fun startLiveWorkout(sessionId: Long, onStarted: () -> Unit = {}) {
         viewModelScope.launch {
             val workout = repository.getAllWorkouts().first().find { it.session.sessionId == sessionId }
             if (workout != null) {
@@ -106,6 +106,7 @@ class ExerciseViewModel @Inject constructor(
                             ))
                         }
                     }
+                    onStarted()
                 }
             }
         }

@@ -34,6 +34,7 @@ import com.example.muscuapp.data.local.ExerciseWithSets
 import com.example.muscuapp.service.WorkoutTimerService
 import com.example.muscuapp.ui.components.MuscuButton
 import com.example.muscuapp.ui.components.MuscuCard
+import com.example.muscuapp.ui.components.MuscuConfirmDialog
 import com.example.muscuapp.ui.components.MuscuSuccessCard
 import com.example.muscuapp.ui.components.MuscuTextField
 import com.example.muscuapp.ui.components.MuscuTopBar
@@ -56,6 +57,7 @@ fun LiveWorkoutScreen(
     
     var timeElapsed by remember { mutableStateOf(0L) }
     var showFinishSummary by remember { mutableStateOf(false) }
+    var setToDelete by remember { mutableStateOf<ExerciseSetEntity?>(null) }
 
     var showRestTimeSelector by remember { mutableStateOf(false) }
 
@@ -127,7 +129,7 @@ fun LiveWorkoutScreen(
                                 viewModel.addWarmupSet(exerciseWithSets.exercise.id, 10, exerciseWithSets.exercise.weight * 0.4f)
                             },
                             onDeleteWarmup = { set ->
-                                viewModel.deleteSet(set)
+                                setToDelete = set
                             }
                         )
                     }
@@ -138,6 +140,21 @@ fun LiveWorkoutScreen(
                 }
             }
         }
+
+        MuscuConfirmDialog(
+            visible = setToDelete != null,
+            title = "Supprimer la série ?",
+            message = "Cette action est irréversible.",
+            confirmText = "SUPPRIMER",
+            dismissText = "ANNULER",
+            onConfirm = {
+                setToDelete?.let { viewModel.deleteSet(it) }
+                setToDelete = null
+            },
+            onDismiss = {
+                setToDelete = null
+            }
+        )
 
         if (showRestTimeSelector) {
             var customTime by remember { mutableStateOf(TextFieldValue("60", selection = TextRange(0, 2))) }
@@ -331,7 +348,6 @@ fun LiveSetRow(
 ) {
     var weightText by remember(set.setId, set.weight) { mutableStateOf(set.weight.toString()) }
     var repsText by remember(set.setId, set.reps) { mutableStateOf(set.reps.toString()) }
-    var showDeleteConfirm by remember(set.setId) { mutableStateOf(false) }
 
     Row(
         modifier = Modifier
@@ -400,7 +416,7 @@ fun LiveSetRow(
             horizontalArrangement = Arrangement.End
         ) {
             if (onDelete != null) {
-                IconButton(onClick = { showDeleteConfirm = true }, modifier = Modifier.size(40.dp)) {
+                IconButton(onClick = onDelete, modifier = Modifier.size(40.dp)) {
                     Icon(Icons.Default.Delete, null, tint = MuscuTheme.colors.error, modifier = Modifier.size(20.dp))
                 }
             }
@@ -415,30 +431,6 @@ fun LiveSetRow(
             }
         }
 
-        if (showDeleteConfirm && onDelete != null) {
-            AlertDialog(
-                onDismissRequest = { showDeleteConfirm = false },
-                title = { Text("Supprimer la série ?") },
-                text = {
-                    Text("Cette action est irréversible.")
-                },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            showDeleteConfirm = false
-                            onDelete()
-                        }
-                    ) {
-                        Text("SUPPRIMER", color = MuscuTheme.colors.error)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showDeleteConfirm = false }) {
-                        Text("ANNULER")
-                    }
-                }
-            )
-        }
     }
 }
 

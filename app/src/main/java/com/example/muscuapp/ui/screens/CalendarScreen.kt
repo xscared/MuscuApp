@@ -46,6 +46,7 @@ fun CalendarScreen(
     var selectedWorkoutForActions by remember { mutableStateOf<WorkoutWithExercisesAndSets?>(null) }
     var showWorkoutActions by remember { mutableStateOf(false) }
     var showRenameSheet by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
     var renameValue by remember { mutableStateOf("") }
 
     val monthFormatter = SimpleDateFormat("MMMM yyyy", Locale.getDefault())
@@ -239,11 +240,28 @@ fun CalendarScreen(
             icon = Icons.Default.Delete,
             color = MuscuTheme.colors.error,
             onClick = {
-                selectedWorkoutForActions?.let { viewModel.deleteWorkout(it.session) }
+                showDeleteConfirm = true
                 showWorkoutActions = false
             }
         )
     }
+
+    MuscuConfirmDialog(
+        visible = showDeleteConfirm && selectedWorkoutForActions != null,
+        title = "Supprimer la séance ?",
+        message = "Voulez-vous vraiment supprimer '${selectedWorkoutForActions?.session?.title ?: ""}' ? Cette action est irréversible.",
+        confirmText = "SUPPRIMER",
+        dismissText = "ANNULER",
+        onConfirm = {
+            selectedWorkoutForActions?.let { viewModel.deleteWorkout(it.session) }
+            showDeleteConfirm = false
+            selectedWorkoutForActions = null
+        },
+        onDismiss = {
+            showDeleteConfirm = false
+            selectedWorkoutForActions = null
+        }
+    )
 
     // --- RENAME SHEET ---
     MuscuActionSheet(

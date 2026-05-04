@@ -33,6 +33,7 @@ data class MuscuTypography(
     val titleMedium: TextStyle,
     val bodyLarge: TextStyle,
     val bodyMedium: TextStyle,
+    val bodySmall: TextStyle,
     val labelSmall: TextStyle,
     val timerLarge: TextStyle,
     val monoLabel: TextStyle   // Label typé technique/chrono
@@ -105,6 +106,11 @@ val DefaultMuscuTypography = MuscuTypography(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp
+    ),
+    bodySmall = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Normal,
+        fontSize = 12.sp
     ),
     labelSmall = TextStyle(
         fontFamily = FontFamily.SansSerif,

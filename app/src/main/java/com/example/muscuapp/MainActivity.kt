@@ -95,6 +95,7 @@ class MainActivity : ComponentActivity() {
                             composable("home") {
                                 HomeScreen(
                                     onWorkoutClick = { id -> navController.navigate("detail/$id") },
+                                    onLiveClick = { id -> navController.navigate("live/$id") },
                                     onStatsClick = { navController.navigate("stats") },
                                     onCalendarClick = { navController.navigate("calendar") }
                                 )

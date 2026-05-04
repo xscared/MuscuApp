@@ -28,10 +28,13 @@ import com.example.muscuapp.data.prefs.ThemeMode
 import com.example.muscuapp.ui.components.*
 import com.example.muscuapp.ui.theme.MuscuTheme
 import com.example.muscuapp.ui.viewmodel.ExerciseViewModel
+import com.example.muscuapp.util.WorkoutSuggestion
+import com.example.muscuapp.util.suggestWorkoutForToday
 
 @Composable
 fun HomeScreen(
     onWorkoutClick: (Long) -> Unit,
+    onLiveClick: (Long) -> Unit,
     onStatsClick: () -> Unit,
     onCalendarClick: () -> Unit,
     viewModel: ExerciseViewModel = hiltViewModel()
@@ -54,7 +57,9 @@ fun HomeScreen(
     var selectedWorkoutForActions by remember { mutableStateOf<WorkoutWithExercisesAndSets?>(null) }
     var showWorkoutActions by remember { mutableStateOf(false) }
     var showRenameSheet by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
     var renameValue by remember { mutableStateOf("") }
+    val suggestedWorkout = remember(workouts) { suggestWorkoutForToday(workouts) }
 
     val exportBackupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri != null) {
@@ -97,6 +102,24 @@ fun HomeScreen(
             }
         }
     ) {
+        if (suggestedWorkout != null) {
+            item {
+                TodayWorkoutSuggestionCard(
+                    suggestion = suggestedWorkout,
+                    onStart = {
+                        val workout = suggestedWorkout.workout
+                        if (workout.session.isLive) {
+                            onLiveClick(workout.session.sessionId)
+                        } else {
+                            viewModel.startLiveWorkout(workout.session.sessionId) {
+                                onLiveClick(workout.session.sessionId)
+                            }
+                        }
+                    }
+                )
+            }
+        }
+
         item {
             Row(
                 modifier = Modifier
@@ -309,11 +332,28 @@ fun HomeScreen(
             icon = Icons.Default.Delete,
             color = MuscuTheme.colors.error,
             onClick = {
-                selectedWorkoutForActions?.let { viewModel.deleteWorkout(it.session) }
+                showDeleteConfirm = true
                 showWorkoutActions = false
             }
         )
     }
+
+    MuscuConfirmDialog(
+        visible = showDeleteConfirm && selectedWorkoutForActions != null,
+        title = "Supprimer la séance ?",
+        message = "Voulez-vous vraiment supprimer '${selectedWorkoutForActions?.session?.title ?: ""}' ? Cette action est irréversible.",
+        confirmText = "SUPPRIMER",
+        dismissText = "ANNULER",
+        onConfirm = {
+            selectedWorkoutForActions?.let { viewModel.deleteWorkout(it.session) }
+            showDeleteConfirm = false
+            selectedWorkoutForActions = null
+        },
+        onDismiss = {
+            showDeleteConfirm = false
+            selectedWorkoutForActions = null
+        }
+    )
 
     // --- RENAME SHEET ---
     MuscuActionSheet(
@@ -336,6 +376,44 @@ fun HomeScreen(
                     }
                     showRenameSheet = false
                 },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+}
+
+@Composable
+private fun TodayWorkoutSuggestionCard(
+    suggestion: WorkoutSuggestion,
+    onStart: () -> Unit
+) {
+    MuscuCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = MuscuTheme.spacing.medium, vertical = MuscuTheme.spacing.small),
+        borderColor = MuscuTheme.colors.primary
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(
+                text = "SÉANCE DU JOUR",
+                style = MuscuTheme.typography.labelSmall,
+                color = MuscuTheme.colors.primary,
+                letterSpacing = 1.sp
+            )
+            Text(
+                text = suggestion.workout.session.title.uppercase(),
+                style = MuscuTheme.typography.titleMedium,
+                color = MuscuTheme.colors.textPrimary,
+                fontWeight = FontWeight.Black
+            )
+            Text(
+                text = suggestion.reason,
+                style = MuscuTheme.typography.bodySmall,
+                color = MuscuTheme.colors.textSecondary
+            )
+            MuscuButton(
+                text = if (suggestion.workout.session.isLive) "REPRENDRE" else "COMMENCER",
+                onClick = onStart,
                 modifier = Modifier.fillMaxWidth()
             )
         }
