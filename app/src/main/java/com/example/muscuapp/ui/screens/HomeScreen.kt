@@ -29,6 +29,8 @@ import com.example.muscuapp.ui.components.*
 import com.example.muscuapp.ui.theme.MuscuTheme
 import com.example.muscuapp.ui.viewmodel.ExerciseViewModel
 import com.example.muscuapp.util.WorkoutSuggestion
+import com.example.muscuapp.util.dayOfWeekLabel
+import com.example.muscuapp.util.orderedDayOfWeekValues
 import com.example.muscuapp.util.suggestWorkoutForToday
 
 @Composable
@@ -53,13 +55,23 @@ fun HomeScreen(
     var newWorkoutTitle by remember { mutableStateOf("") }
     
     var showSettingsSheet by remember { mutableStateOf(false) }
+    var selectedScheduleDay by remember { mutableStateOf<Int?>(null) }
     
     var selectedWorkoutForActions by remember { mutableStateOf<WorkoutWithExercisesAndSets?>(null) }
     var showWorkoutActions by remember { mutableStateOf(false) }
     var showRenameSheet by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var renameValue by remember { mutableStateOf("") }
-    val suggestedWorkout = remember(workouts) { suggestWorkoutForToday(workouts) }
+    val workoutsById = remember(workouts) { workouts.associateBy { it.session.sessionId } }
+    val preferredWorkoutIdsByDay by viewModel.preferredWorkoutIdsByDay.collectAsState()
+    val suggestedWorkout = remember(workouts, preferredWorkoutIdsByDay) {
+        suggestWorkoutForToday(workouts, manualSchedule = preferredWorkoutIdsByDay)
+    }
+
+    val closeSettingsSheet = {
+        showSettingsSheet = false
+        selectedScheduleDay = null
+    }
 
     val exportBackupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri != null) {
@@ -181,7 +193,7 @@ fun HomeScreen(
     // --- CUSTOM SETTINGS SHEET ---
     MuscuActionSheet(
         visible = showSettingsSheet,
-        onDismiss = { showSettingsSheet = false },
+        onDismiss = closeSettingsSheet,
         title = "Paramètres"
     ) {
         MuscuActionItem(
@@ -226,6 +238,29 @@ fun HomeScreen(
             }
         }
 
+        Text(
+            text = "SUGGESTION PAR JOUR",
+            style = MuscuTheme.typography.labelSmall,
+            color = MuscuTheme.colors.textSecondary,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+
+        orderedDayOfWeekValues().forEach { dayOfWeek ->
+            val selectedWorkoutId = preferredWorkoutIdsByDay[dayOfWeek]
+            val selectedWorkoutTitle = when {
+                selectedWorkoutId == null -> "Aucune séance"
+                workoutsById[selectedWorkoutId] != null -> workoutsById[selectedWorkoutId]?.session?.title ?: "Aucune séance"
+                else -> "Séance supprimée"
+            }
+
+            MuscuActionItem(
+                label = "${dayOfWeekLabel(dayOfWeek)} : $selectedWorkoutTitle",
+                icon = Icons.Default.CalendarToday,
+                color = if (selectedWorkoutId != null) MuscuTheme.colors.primary else MuscuTheme.colors.textPrimary,
+                onClick = { selectedScheduleDay = dayOfWeek }
+            )
+        }
+
         MuscuActionItem(
             label = "Son de l'alarme",
             icon = Icons.Default.MusicNote,
@@ -250,7 +285,7 @@ fun HomeScreen(
             label = "Sauvegarder (JSON)",
             icon = Icons.Default.CloudUpload,
             onClick = {
-                showSettingsSheet = false
+                closeSettingsSheet()
                 exportBackupLauncher.launch("muscuapp_backup.json")
             }
         )
@@ -258,10 +293,60 @@ fun HomeScreen(
             label = "Restaurer (JSON)",
             icon = Icons.Default.CloudDownload,
             onClick = {
-                showSettingsSheet = false
+                closeSettingsSheet()
                 importBackupLauncher.launch("application/json")
             }
         )
+    }
+
+    MuscuActionSheet(
+        visible = selectedScheduleDay != null,
+        onDismiss = { selectedScheduleDay = null },
+        title = selectedScheduleDay?.let { dayOfWeekLabel(it) }?.let { "Séance pour $it" }
+    ) {
+        val selectedDay = selectedScheduleDay
+        if (selectedDay != null) {
+            val currentWorkoutId = preferredWorkoutIdsByDay[selectedDay]
+
+            Text(
+                text = "Choisis la séance à proposer pour ${dayOfWeekLabel(selectedDay)}.",
+                style = MuscuTheme.typography.bodyMedium,
+                color = MuscuTheme.colors.textSecondary,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+
+            MuscuActionItem(
+                label = "Aucune séance",
+                icon = Icons.Default.Block,
+                color = if (currentWorkoutId == null) MuscuTheme.colors.primary else MuscuTheme.colors.textPrimary,
+                onClick = {
+                    viewModel.setPreferredWorkoutForDay(selectedDay, null)
+                    selectedScheduleDay = null
+                }
+            )
+
+            if (workouts.isEmpty()) {
+                Text(
+                    text = "Crée d'abord une séance pour pouvoir l'associer à ce jour.",
+                    style = MuscuTheme.typography.bodyMedium,
+                    color = MuscuTheme.colors.textSecondary,
+                    modifier = Modifier.padding(vertical = 12.dp)
+                )
+            } else {
+                workouts.forEach { workout ->
+                    val isSelected = workout.session.sessionId == currentWorkoutId
+                    MuscuActionItem(
+                        label = workout.session.title,
+                        icon = if (isSelected) Icons.Default.CheckCircle else Icons.Default.FitnessCenter,
+                        color = if (isSelected) MuscuTheme.colors.primary else MuscuTheme.colors.textPrimary,
+                        onClick = {
+                            viewModel.setPreferredWorkoutForDay(selectedDay, workout.session.sessionId)
+                            selectedScheduleDay = null
+                        }
+                    )
+                }
+            }
+        }
     }
 
     // --- CUSTOM ADD WORKOUT SHEET (Replaces AlertDialog) ---

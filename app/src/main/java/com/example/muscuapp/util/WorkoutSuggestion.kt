@@ -13,9 +13,19 @@ data class WorkoutSuggestion(
 
 fun suggestWorkoutForToday(
     workouts: List<WorkoutWithExercisesAndSets>,
-    dayOfWeek: Int = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
+    dayOfWeek: Int = Calendar.getInstance().get(Calendar.DAY_OF_WEEK),
+    manualSchedule: Map<Int, Long?> = emptyMap()
 ): WorkoutSuggestion? {
     if (workouts.isEmpty()) return null
+
+    manualSchedule[dayOfWeek]?.let { scheduledWorkoutId ->
+        workouts.firstOrNull { it.session.sessionId == scheduledWorkoutId }?.let { workout ->
+            return WorkoutSuggestion(
+                workout = workout,
+                reason = "Séance définie dans tes paramètres pour ${dayOfWeekLabel(dayOfWeek).lowercase(Locale.getDefault())}."
+            )
+        }
+    }
 
     val dayRule = dayRules[dayOfWeek] ?: dayRules[Calendar.MONDAY]!!
 
@@ -40,6 +50,27 @@ fun suggestWorkoutForToday(
         }
         .maxByOrNull { it.score }
         ?.let { WorkoutSuggestion(it.workout, it.reason) }
+}
+
+fun orderedDayOfWeekValues(): List<Int> = listOf(
+    Calendar.MONDAY,
+    Calendar.TUESDAY,
+    Calendar.WEDNESDAY,
+    Calendar.THURSDAY,
+    Calendar.FRIDAY,
+    Calendar.SATURDAY,
+    Calendar.SUNDAY
+)
+
+fun dayOfWeekLabel(dayOfWeek: Int): String = when (dayOfWeek) {
+    Calendar.MONDAY -> "Lundi"
+    Calendar.TUESDAY -> "Mardi"
+    Calendar.WEDNESDAY -> "Mercredi"
+    Calendar.THURSDAY -> "Jeudi"
+    Calendar.FRIDAY -> "Vendredi"
+    Calendar.SATURDAY -> "Samedi"
+    Calendar.SUNDAY -> "Dimanche"
+    else -> "Jour"
 }
 
 private data class DayRule(

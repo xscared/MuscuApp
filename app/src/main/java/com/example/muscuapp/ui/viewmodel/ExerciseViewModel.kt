@@ -34,6 +34,11 @@ class ExerciseViewModel @Inject constructor(
     val hapticEnabled = userPrefs.hapticEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     val hapticIntensity = userPrefs.hapticIntensity.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1.0f)
     val alarmSound = userPrefs.alarmSound.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+    val preferredWorkoutIdsByDay = userPrefs.preferredWorkoutIdsByDay.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        emptyMap<Int, Long?>()
+    )
 
     // Calcul des Streaks (semaines consécutives avec au moins 2 séances)
     val streakCount: StateFlow<Int> = workouts.map { sessionList ->
@@ -324,6 +329,12 @@ class ExerciseViewModel @Inject constructor(
     fun setAlarmSound(uri: String?) {
         viewModelScope.launch {
             userPrefs.setAlarmSound(uri)
+        }
+    }
+
+    fun setPreferredWorkoutForDay(dayOfWeek: Int, workoutId: Long?) {
+        viewModelScope.launch {
+            userPrefs.setPreferredWorkoutForDay(dayOfWeek, workoutId)
         }
     }
 

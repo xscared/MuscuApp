@@ -13,5 +13,6 @@ data class MuscuBackupFile(
     val sets: List<ExerciseSetEntity> = emptyList(),
     val templates: List<WorkoutTemplateEntity> = emptyList(),
     val templateExercises: List<TemplateExerciseEntity> = emptyList(),
-    val weightUnit: String = "KG"
+    val weightUnit: String = "KG",
+    val preferredWorkoutIdsByDay: Map<Int, Long?> = emptyMap()
 )

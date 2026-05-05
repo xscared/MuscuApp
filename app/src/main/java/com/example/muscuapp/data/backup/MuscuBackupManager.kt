@@ -5,6 +5,7 @@ import android.net.Uri
 import com.example.muscuapp.data.prefs.UserPrefs
 import com.example.muscuapp.data.prefs.WeightUnit
 import com.example.muscuapp.data.repository.ExerciseRepository
+import com.example.muscuapp.util.orderedDayOfWeekValues
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -23,7 +24,9 @@ class MuscuBackupManager @Inject constructor(
         try {
             val backupData = repository.getMuscuBackupData()
             val currentUnit = userPrefs.weightUnit.first()
+            val currentSchedule = userPrefs.preferredWorkoutIdsByDay.first()
             val dataWithPrefs = backupData.copy(weightUnit = currentUnit.name)
+                .copy(preferredWorkoutIdsByDay = currentSchedule)
             
             val gson = Gson()
             val jsonString = gson.toJson(dataWithPrefs)
@@ -64,6 +67,9 @@ class MuscuBackupManager @Inject constructor(
                 WeightUnit.KG
             }
             userPrefs.setWeightUnit(unitToRestore)
+            orderedDayOfWeekValues().forEach { dayOfWeek ->
+                userPrefs.setPreferredWorkoutForDay(dayOfWeek, backup.preferredWorkoutIdsByDay[dayOfWeek])
+            }
 
             Result.success(Unit)
         } catch (e: Exception) {

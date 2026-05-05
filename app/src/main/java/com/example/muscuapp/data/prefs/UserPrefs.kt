@@ -4,10 +4,12 @@ import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.util.Calendar
 
 private val Context.dataStore by preferencesDataStore(name = "user_prefs")
 
@@ -20,6 +22,15 @@ class UserPrefs(private val context: Context) {
     private val HAPTIC_ENABLED_KEY = booleanPreferencesKey("haptic_enabled")
     private val HAPTIC_INTENSITY_KEY = floatPreferencesKey("haptic_intensity")
     private val ALARM_SOUND_KEY = stringPreferencesKey("alarm_sound")
+    private val preferredWorkoutKeys = mapOf(
+        Calendar.MONDAY to longPreferencesKey("preferred_workout_monday"),
+        Calendar.TUESDAY to longPreferencesKey("preferred_workout_tuesday"),
+        Calendar.WEDNESDAY to longPreferencesKey("preferred_workout_wednesday"),
+        Calendar.THURSDAY to longPreferencesKey("preferred_workout_thursday"),
+        Calendar.FRIDAY to longPreferencesKey("preferred_workout_friday"),
+        Calendar.SATURDAY to longPreferencesKey("preferred_workout_saturday"),
+        Calendar.SUNDAY to longPreferencesKey("preferred_workout_sunday")
+    )
 
     val weightUnit: Flow<WeightUnit> = context.dataStore.data.map { prefs ->
         WeightUnit.valueOf(prefs[UNIT_KEY] ?: WeightUnit.KG.name)
@@ -39,6 +50,10 @@ class UserPrefs(private val context: Context) {
 
     val alarmSound: Flow<String?> = context.dataStore.data.map { prefs ->
         prefs[ALARM_SOUND_KEY]
+    }
+
+    val preferredWorkoutIdsByDay: Flow<Map<Int, Long?>> = context.dataStore.data.map { prefs ->
+        preferredWorkoutKeys.mapValues { (_, key) -> prefs[key] }
     }
 
     suspend fun setWeightUnit(unit: WeightUnit) {
@@ -69,6 +84,18 @@ class UserPrefs(private val context: Context) {
         context.dataStore.edit { prefs ->
             if (uri != null) prefs[ALARM_SOUND_KEY] = uri
             else prefs.remove(ALARM_SOUND_KEY)
+        }
+    }
+
+    suspend fun setPreferredWorkoutForDay(dayOfWeek: Int, workoutId: Long?) {
+        val key = preferredWorkoutKeys[dayOfWeek] ?: return
+
+        context.dataStore.edit { prefs ->
+            if (workoutId != null) {
+                prefs[key] = workoutId
+            } else {
+                prefs.remove(key)
+            }
         }
     }
 }
