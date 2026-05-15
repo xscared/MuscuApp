@@ -46,17 +46,24 @@ interface ExerciseDao {
     @Query("UPDATE exercises SET weight = :weight, reps = :reps WHERE name = :name")
     suspend fun syncExerciseDataByName(name: String, weight: Float, reps: Int)
 
-    @Query("UPDATE exercises SET weight = :weight, reps = :reps, sets = :sets WHERE name = :name")
-    suspend fun syncExerciseAllDataByName(name: String, weight: Float, reps: Int, sets: Int)
+    @Query("UPDATE exercises SET weight = :weight, reps = :reps, sets = :sets, category = :category, note = :note WHERE name = :name")
+    suspend fun syncExerciseAllDataByName(name: String, weight: Float, reps: Int, sets: Int, category: String, note: String)
 
     @Query("UPDATE exercise_sets SET weight = :weight, reps = :reps WHERE exerciseId IN (SELECT id FROM exercises WHERE name = :name)")
     suspend fun syncSetsByExerciseName(name: String, weight: Float, reps: Int)
 
+    @Query("UPDATE template_exercises SET defaultWeight = :weight, defaultReps = :reps, defaultSets = :sets, category = :category WHERE name = :name")
+    suspend fun syncTemplatesByName(name: String, weight: Float, reps: Int, sets: Int, category: String)
+
+    @Query("UPDATE template_exercises SET defaultWeight = :weight, defaultReps = :reps WHERE name = :name")
+    suspend fun syncTemplatesValuesByName(name: String, weight: Float, reps: Int)
+
     @Transaction
     suspend fun updateExerciseWithSync(exercise: ExerciseEntity) {
         updateExercise(exercise)
-        syncExerciseAllDataByName(exercise.name, exercise.weight, exercise.reps, exercise.sets)
+        syncExerciseAllDataByName(exercise.name, exercise.weight, exercise.reps, exercise.sets, exercise.category, exercise.note)
         syncSetsByExerciseName(exercise.name, exercise.weight, exercise.reps)
+        syncTemplatesByName(exercise.name, exercise.weight, exercise.reps, exercise.sets, exercise.category)
     }
 
     @Query("SELECT MAX(weight) FROM exercises WHERE name = :name")
@@ -76,6 +83,7 @@ interface ExerciseDao {
         if (name != null) {
             syncExerciseDataByName(name, set.weight, set.reps)
             syncSetsByExerciseName(name, set.weight, set.reps)
+            syncTemplatesValuesByName(name, set.weight, set.reps)
         }
     }
 
