@@ -1,7 +1,7 @@
 package com.example.muscuapp.data.repository
 
 import com.example.muscuapp.data.local.*
-import com.example.muscuapp.data.backup.MuscuBackupFile
+import com.example.muscuapp.data.backup.*
 import kotlinx.coroutines.flow.Flow
 import java.text.SimpleDateFormat
 import java.util.*
@@ -104,22 +104,121 @@ class ExerciseRepository(private val dao: ExerciseDao) {
     }
 
     suspend fun getMuscuBackupData(): MuscuBackupFile {
+        val allWorkouts = dao.getAllWorkoutsOnce()
+        val allTemplates = dao.getAllTemplatesOnce()
+        
         return MuscuBackupFile(
-            sessions = dao.dumpSessions(),
-            exercises = dao.dumpExercises(),
-            sets = dao.dumpSets(),
-            templates = dao.dumpTemplates(),
-            templateExercises = dao.dumpTemplateExercises()
+            workouts = allWorkouts.map { w ->
+                WorkoutBackupDto(
+                    title = w.session.title,
+                    date = w.session.date,
+                    isLive = w.session.isLive,
+                    startTime = w.session.startTime,
+                    endTime = w.session.endTime,
+                    exercises = w.exercises.map { e ->
+                        ExerciseBackupDto(
+                            name = e.exercise.name,
+                            setsCount = e.exercise.sets,
+                            repsCount = e.exercise.reps,
+                            weight = e.exercise.weight,
+                            category = e.exercise.category,
+                            note = e.exercise.note,
+                            isFavorite = e.exercise.isFavorite,
+                            isPR = e.exercise.isPR,
+                            order = e.exercise.order,
+                            date = e.exercise.date,
+                            detailedSets = e.sets.map { s ->
+                                SetBackupDto(
+                                    reps = s.reps,
+                                    weight = s.weight,
+                                    isCompleted = s.isCompleted,
+                                    isWarmup = s.isWarmup,
+                                    timestamp = s.timestamp
+                                )
+                            }
+                        )
+                    }
+                )
+            },
+            templates = allTemplates.map { t ->
+                TemplateBackupDto(
+                    name = t.template.name,
+                    exercises = t.exercises.map { te ->
+                        TemplateExerciseBackupDto(
+                            name = te.name,
+                            defaultSets = te.defaultSets,
+                            defaultReps = te.defaultReps,
+                            defaultWeight = te.defaultWeight,
+                            category = te.category
+                        )
+                    }
+                )
+            }
         )
     }
 
     suspend fun restoreMuscuBackupData(backup: MuscuBackupFile) {
-        dao.restoreDatabase(
-            sessions = backup.sessions,
-            exercises = backup.exercises,
-            sets = backup.sets,
-            templates = backup.templates,
-            templateExercises = backup.templateExercises
-        )
+        if (backup.version == 1) {
+            dao.restoreDatabase(
+                sessions = backup.sessions,
+                exercises = backup.exercises,
+                sets = backup.sets,
+                templates = backup.templatesLegacy,
+                templateExercises = backup.templateExercises
+            )
+        } else {
+            dao.clearAllData()
+            
+            backup.workouts.forEach { wDto ->
+                val sessionId = dao.insertWorkout(WorkoutSessionEntity(
+                    title = wDto.title,
+                    date = wDto.date,
+                    isLive = wDto.isLive,
+                    startTime = wDto.startTime,
+                    endTime = wDto.endTime
+                ))
+                
+                wDto.exercises.forEach { eDto ->
+                    val exerciseId = dao.insertExercise(ExerciseEntity(
+                        sessionId = sessionId,
+                        name = eDto.name,
+                        sets = eDto.setsCount,
+                        reps = eDto.repsCount,
+                        weight = eDto.weight,
+                        category = eDto.category,
+                        note = eDto.note,
+                        isFavorite = eDto.isFavorite,
+                        isPR = eDto.isPR,
+                        order = eDto.order,
+                        date = eDto.date
+                    ))
+                    
+                    eDto.detailedSets.forEach { sDto ->
+                        dao.insertSet(ExerciseSetEntity(
+                            exerciseId = exerciseId,
+                            reps = sDto.reps,
+                            weight = sDto.weight,
+                            isCompleted = sDto.isCompleted,
+                            isWarmup = sDto.isWarmup,
+                            timestamp = sDto.timestamp
+                        ))
+                    }
+                }
+            }
+            
+            backup.templates.forEach { tDto ->
+                val templateId = dao.insertTemplate(WorkoutTemplateEntity(name = tDto.name))
+                tDto.exercises.forEach { teDto ->
+                    dao.insertTemplateExercise(TemplateExerciseEntity(
+                        templateId = templateId,
+                        name = teDto.name,
+                        defaultSets = teDto.defaultSets,
+                        defaultReps = teDto.defaultReps,
+                        defaultWeight = teDto.defaultWeight,
+                        category = teDto.category
+                    ))
+                }
+            }
+        }
     }
 }

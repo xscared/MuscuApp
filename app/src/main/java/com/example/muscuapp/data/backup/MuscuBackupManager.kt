@@ -25,8 +25,17 @@ class MuscuBackupManager @Inject constructor(
             val backupData = repository.getMuscuBackupData()
             val currentUnit = userPrefs.weightUnit.first()
             val currentSchedule = userPrefs.preferredWorkoutIdsByDay.first()
-            val dataWithPrefs = backupData.copy(weightUnit = currentUnit.name)
-                .copy(preferredWorkoutIdsByDay = currentSchedule)
+            val allWorkouts = repository.getAllWorkouts().first()
+            
+            // Map IDs to Names for a portable backup
+            val scheduleNames = currentSchedule.mapValues { (_, id) ->
+                allWorkouts.find { it.session.sessionId == id }?.session?.title
+            }
+
+            val dataWithPrefs = backupData.copy(
+                weightUnit = currentUnit.name,
+                preferredWorkoutNamesByDay = scheduleNames
+            )
             
             val gson = Gson()
             val jsonString = gson.toJson(dataWithPrefs)
@@ -53,7 +62,7 @@ class MuscuBackupManager @Inject constructor(
 
             val backup = gson.fromJson(jsonString, MuscuBackupFile::class.java)
             
-            if (backup.version > 1) {
+            if (backup.version > 2) {
                 throw IllegalArgumentException("Backup version in the future not supported")
             }
 
@@ -67,8 +76,19 @@ class MuscuBackupManager @Inject constructor(
                 WeightUnit.KG
             }
             userPrefs.setWeightUnit(unitToRestore)
-            orderedDayOfWeekValues().forEach { dayOfWeek ->
-                userPrefs.setPreferredWorkoutForDay(dayOfWeek, backup.preferredWorkoutIdsByDay[dayOfWeek])
+            
+            if (backup.version == 1) {
+                orderedDayOfWeekValues().forEach { dayOfWeek ->
+                    userPrefs.setPreferredWorkoutForDay(dayOfWeek, backup.preferredWorkoutIdsByDay[dayOfWeek])
+                }
+            } else {
+                // Re-map Names to NEW IDs after DB restoration (v2)
+                val allNewWorkouts = repository.getAllWorkouts().first()
+                orderedDayOfWeekValues().forEach { dayOfWeek ->
+                    val workoutName = backup.preferredWorkoutNamesByDay[dayOfWeek]
+                    val newId = allNewWorkouts.find { it.session.title == workoutName }?.session?.sessionId
+                    userPrefs.setPreferredWorkoutForDay(dayOfWeek, newId)
+                }
             }
 
             Result.success(Unit)

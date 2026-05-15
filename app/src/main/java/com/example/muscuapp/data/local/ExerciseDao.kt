@@ -98,6 +98,10 @@ interface ExerciseDao {
     @Query("SELECT * FROM workout_templates")
     fun getAllTemplates(): Flow<List<TemplateWithExercises>>
 
+    @Transaction
+    @Query("SELECT * FROM workout_templates")
+    suspend fun getAllTemplatesOnce(): List<TemplateWithExercises>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTemplate(template: WorkoutTemplateEntity): Long
 
@@ -125,6 +129,12 @@ interface ExerciseDao {
 
     @Query("DELETE FROM workout_templates")
     suspend fun clearTemplates()
+
+    @Transaction
+    suspend fun clearAllData() {
+        clearSessions()
+        clearTemplates()
+    }
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSessionsRaw(sessions: List<WorkoutSessionEntity>)
