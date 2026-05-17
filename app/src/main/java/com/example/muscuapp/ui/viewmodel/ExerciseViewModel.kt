@@ -180,6 +180,18 @@ class ExerciseViewModel @Inject constructor(
         }
     }
 
+    fun reorderExercises(exercises: List<ExerciseEntity>) {
+        viewModelScope.launch {
+            try {
+                exercises.forEachIndexed { index, exercise ->
+                    repository.updateExercise(exercise.copy(order = index))
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
     fun toggleFavorite(exercise: ExerciseEntity, isFavorite: Boolean) {
         viewModelScope.launch {
             repository.updateExercise(exercise.copy(isFavorite = isFavorite))
