@@ -11,7 +11,6 @@ import com.example.muscuapp.data.repository.ExerciseRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.util.Calendar
 import javax.inject.Inject
 
 data class SetInfo(
@@ -37,41 +36,8 @@ class ExerciseViewModel @Inject constructor(
     val preferredWorkoutIdsByDay = userPrefs.preferredWorkoutIdsByDay.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5000),
-        emptyMap<Int, Long?>()
+        emptyMap()
     )
-
-    // Calcul des Streaks (semaines consécutives avec au moins 2 séances)
-    val streakCount: StateFlow<Int> = workouts.map { sessionList ->
-        calculateStreaks(sessionList)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
-
-    private fun calculateStreaks(workouts: List<WorkoutWithExercisesAndSets>): Int {
-        if (workouts.isEmpty()) return 0
-        val calendar = Calendar.getInstance()
-        val workoutsByWeek = workouts.groupBy {
-            calendar.timeInMillis = it.session.date
-            "${calendar.get(Calendar.YEAR)}-${calendar.get(Calendar.WEEK_OF_YEAR)}"
-        }
-        var streaks = 0
-        val currentWeek = Calendar.getInstance()
-        while (true) {
-            val key = "${currentWeek.get(Calendar.YEAR)}-${currentWeek.get(Calendar.WEEK_OF_YEAR)}"
-            val sessionsInWeek = workoutsByWeek[key]?.size ?: 0
-            if (sessionsInWeek >= 2) {
-                streaks++
-                currentWeek.add(Calendar.WEEK_OF_YEAR, -1)
-            } else {
-                val now = Calendar.getInstance()
-                if (currentWeek.get(Calendar.YEAR) == now.get(Calendar.YEAR) && 
-                    currentWeek.get(Calendar.WEEK_OF_YEAR) == now.get(Calendar.WEEK_OF_YEAR)) {
-                    currentWeek.add(Calendar.WEEK_OF_YEAR, -1)
-                    continue 
-                }
-                break
-            }
-        }
-        return streaks
-    }
 
     fun createWorkout(title: String, isLive: Boolean = false, onCreated: (Long) -> Unit) {
         viewModelScope.launch {
@@ -103,11 +69,12 @@ class ExerciseViewModel @Inject constructor(
                 // On s'assure que les séries existent
                 workout.exercises.forEach { exWithSets ->
                     if (exWithSets.sets.isEmpty()) {
-                        repeat(exWithSets.exercise.sets) {
+                        repeat(exWithSets.exercise.sets) { i ->
                             repository.insertSet(ExerciseSetEntity(
                                 exerciseId = exWithSets.exercise.id,
                                 reps = exWithSets.exercise.reps,
-                                weight = exWithSets.exercise.weight
+                                weight = exWithSets.exercise.weight,
+                                order = i
                             ))
                         }
                     }
@@ -123,13 +90,11 @@ class ExerciseViewModel @Inject constructor(
                 exerciseId = exerciseId,
                 reps = reps,
                 weight = weight,
-                isWarmup = true
+                isWarmup = true,
+                order = -1 
             ))
         }
     }
-
-    fun getExercisesWithSets(sessionId: Long): Flow<List<ExerciseWithSets>> =
-        repository.getExercisesWithSetsForSession(sessionId)
 
     fun addExerciseWithDetailedSets(
         sessionId: Long,
@@ -164,13 +129,14 @@ class ExerciseViewModel @Inject constructor(
             )
             
             // Insertion de toutes les séries détaillées
-            sets.forEach { setInfo ->
+            sets.forEachIndexed { index, setInfo ->
                 repository.insertSet(
                     ExerciseSetEntity(
                         exerciseId = exerciseId,
                         reps = setInfo.reps,
                         weight = setInfo.weight,
-                        isWarmup = setInfo.isWarmup
+                        isWarmup = setInfo.isWarmup,
+                        order = index
                     )
                 )
             }
@@ -194,58 +160,16 @@ class ExerciseViewModel @Inject constructor(
             
             // Mise à jour des séries : on supprime et on remplace (plus simple pour le moment)
             repository.deleteAllSetsForExercise(exercise.id)
-            sets.forEach { setInfo ->
+            sets.forEachIndexed { index, setInfo ->
                 repository.insertSet(
                     ExerciseSetEntity(
                         exerciseId = exercise.id,
                         reps = setInfo.reps,
                         weight = setInfo.weight,
-                        isWarmup = setInfo.isWarmup
+                        isWarmup = setInfo.isWarmup,
+                        order = index
                     )
                 )
-            }
-        }
-    }
-
-    fun addExercise(sessionId: Long, name: String, sets: Int, reps: Int, weight: Float, category: String, note: String) {
-        viewModelScope.launch {
-            val currentPR = repository.getPersonalRecord(name) ?: 0f
-            val isPR = weight > currentPR
-
-            val currentExercises = repository.getExercisesForSession(sessionId).first()
-            val nextOrder = (currentExercises.maxOfOrNull { it.order } ?: -1) + 1
-
-            val exerciseId = repository.insertExercise(
-                ExerciseEntity(
-                    sessionId = sessionId,
-                    name = name,
-                    sets = sets,
-                    reps = reps,
-                    weight = weight,
-                    category = category,
-                    note = note,
-                    isPR = isPR,
-                    order = nextOrder
-                )
-            )
-
-            val workout = repository.getAllWorkouts().first().find { it.session.sessionId == sessionId }
-            if (workout?.session?.isLive == true) {
-                repeat(sets) {
-                    repository.insertSet(ExerciseSetEntity(exerciseId = exerciseId, reps = reps, weight = weight))
-                }
-            }
-        }
-    }
-
-    fun reorderExercises(exercises: List<ExerciseEntity>) {
-        viewModelScope.launch {
-            try {
-                exercises.forEachIndexed { index, exercise ->
-                    repository.updateExercise(exercise.copy(order = index))
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
             }
         }
     }
@@ -253,12 +177,6 @@ class ExerciseViewModel @Inject constructor(
     fun deleteExercise(exercise: ExerciseEntity) {
         viewModelScope.launch {
             repository.deleteExercise(exercise)
-        }
-    }
-
-    fun updateExerciseDetails(exercise: ExerciseEntity) {
-        viewModelScope.launch {
-            repository.updateExercise(exercise)
         }
     }
 
@@ -341,13 +259,6 @@ class ExerciseViewModel @Inject constructor(
     fun createWorkoutFromTemplate(template: TemplateWithExercises) {
         viewModelScope.launch {
             repository.createWorkoutFromTemplate(template)
-        }
-    }
-
-    fun exportCsv(onResult: (String) -> Unit) {
-        viewModelScope.launch {
-            val data = repository.getCsvData()
-            onResult(data)
         }
     }
 

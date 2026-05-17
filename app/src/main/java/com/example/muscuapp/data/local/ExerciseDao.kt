@@ -49,8 +49,8 @@ interface ExerciseDao {
     @Query("UPDATE exercises SET weight = :weight, reps = :reps, sets = :sets, category = :category, note = :note WHERE name = :name")
     suspend fun syncExerciseAllDataByName(name: String, weight: Float, reps: Int, sets: Int, category: String, note: String)
 
-    @Query("UPDATE exercise_sets SET weight = :weight, reps = :reps WHERE exerciseId IN (SELECT id FROM exercises WHERE name = :name)")
-    suspend fun syncSetsByExerciseName(name: String, weight: Float, reps: Int)
+    @Query("UPDATE exercise_sets SET weight = :weight, reps = :reps WHERE `order` = :order AND exerciseId IN (SELECT id FROM exercises WHERE name = :name)")
+    suspend fun syncSetByOrderAndName(name: String, order: Int, weight: Float, reps: Int)
 
     @Query("UPDATE template_exercises SET defaultWeight = :weight, defaultReps = :reps, defaultSets = :sets, category = :category WHERE name = :name")
     suspend fun syncTemplatesByName(name: String, weight: Float, reps: Int, sets: Int, category: String)
@@ -62,7 +62,6 @@ interface ExerciseDao {
     suspend fun updateExerciseWithSync(exercise: ExerciseEntity) {
         updateExercise(exercise)
         syncExerciseAllDataByName(exercise.name, exercise.weight, exercise.reps, exercise.sets, exercise.category, exercise.note)
-        syncSetsByExerciseName(exercise.name, exercise.weight, exercise.reps)
         syncTemplatesByName(exercise.name, exercise.weight, exercise.reps, exercise.sets, exercise.category)
     }
 
@@ -82,7 +81,7 @@ interface ExerciseDao {
         val name = getExerciseNameById(set.exerciseId)
         if (name != null) {
             syncExerciseDataByName(name, set.weight, set.reps)
-            syncSetsByExerciseName(name, set.weight, set.reps)
+            syncSetByOrderAndName(name, set.order, set.weight, set.reps)
             syncTemplatesValuesByName(name, set.weight, set.reps)
         }
     }
@@ -109,21 +108,6 @@ interface ExerciseDao {
     suspend fun insertTemplateExercise(exercise: TemplateExerciseEntity): Long
 
     // --- Import / Export ---
-    @Query("SELECT * FROM workout_sessions")
-    suspend fun dumpSessions(): List<WorkoutSessionEntity>
-
-    @Query("SELECT * FROM exercises")
-    suspend fun dumpExercises(): List<ExerciseEntity>
-
-    @Query("SELECT * FROM exercise_sets")
-    suspend fun dumpSets(): List<ExerciseSetEntity>
-
-    @Query("SELECT * FROM workout_templates")
-    suspend fun dumpTemplates(): List<WorkoutTemplateEntity>
-
-    @Query("SELECT * FROM template_exercises")
-    suspend fun dumpTemplateExercises(): List<TemplateExerciseEntity>
-
     @Query("DELETE FROM workout_sessions")
     suspend fun clearSessions()
 
@@ -134,6 +118,23 @@ interface ExerciseDao {
     suspend fun clearAllData() {
         clearSessions()
         clearTemplates()
+    }
+
+    @Transaction
+    suspend fun restoreDatabase(
+        sessions: List<WorkoutSessionEntity>,
+        exercises: List<ExerciseEntity>,
+        sets: List<ExerciseSetEntity>,
+        templates: List<WorkoutTemplateEntity>,
+        templateExercises: List<TemplateExerciseEntity>,
+    ) {
+        clearAllData()
+        
+        insertSessionsRaw(sessions)
+        insertExercisesRaw(exercises)
+        insertSetsRaw(sets)
+        insertTemplatesRaw(templates)
+        insertTemplateExercisesRaw(templateExercises)
     }
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -150,22 +151,4 @@ interface ExerciseDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTemplateExercisesRaw(templateExercises: List<TemplateExerciseEntity>)
-
-    @Transaction
-    suspend fun restoreDatabase(
-        sessions: List<WorkoutSessionEntity>,
-        exercises: List<ExerciseEntity>,
-        sets: List<ExerciseSetEntity>,
-        templates: List<WorkoutTemplateEntity>,
-        templateExercises: List<TemplateExerciseEntity>
-    ) {
-        clearSessions() // Cascades exercises and sets due to ForeignKey
-        clearTemplates() // Cascades templateExercises due to ForeignKey
-        
-        insertSessionsRaw(sessions)
-        insertExercisesRaw(exercises)
-        insertSetsRaw(sets)
-        insertTemplatesRaw(templates)
-        insertTemplateExercisesRaw(templateExercises)
-    }
 }

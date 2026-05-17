@@ -58,7 +58,8 @@ data class ExerciseSetEntity(
     val weight: Float,
     val isCompleted: Boolean = false,
     val isWarmup: Boolean = false, // Nouveau champ
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val order: Int = 0
 )
 
 data class ExerciseWithSets(

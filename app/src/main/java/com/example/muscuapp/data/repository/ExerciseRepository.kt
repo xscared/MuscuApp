@@ -3,19 +3,19 @@ package com.example.muscuapp.data.repository
 import com.example.muscuapp.data.local.*
 import com.example.muscuapp.data.backup.*
 import kotlinx.coroutines.flow.Flow
-import java.text.SimpleDateFormat
-import java.util.*
 
 class ExerciseRepository(private val dao: ExerciseDao) {
     
     fun getAllWorkouts(): Flow<List<WorkoutWithExercisesAndSets>> = dao.getAllWorkouts()
 
     suspend fun createWorkout(title: String, isLive: Boolean = false): Long {
-        return dao.insertWorkout(WorkoutSessionEntity(
-            title = title, 
-            isLive = isLive,
-            startTime = if (isLive) System.currentTimeMillis() else null
-        ))
+        return dao.insertWorkout(
+            WorkoutSessionEntity(
+                title = title,
+                isLive = isLive,
+                startTime = if (isLive) System.currentTimeMillis() else null,
+            )
+        )
     }
 
     suspend fun deleteWorkout(session: WorkoutSessionEntity) {
@@ -57,13 +57,6 @@ class ExerciseRepository(private val dao: ExerciseDao) {
     // Templates
     fun getAllTemplates(): Flow<List<TemplateWithExercises>> = dao.getAllTemplates()
 
-    suspend fun createTemplate(name: String, exercises: List<TemplateExerciseEntity>) {
-        val templateId = dao.insertTemplate(WorkoutTemplateEntity(name = name))
-        exercises.forEach { 
-            dao.insertTemplateExercise(it.copy(templateId = templateId))
-        }
-    }
-
     suspend fun createWorkoutFromTemplate(template: TemplateWithExercises) {
         val sessionId = dao.insertWorkout(WorkoutSessionEntity(title = template.template.name))
         template.exercises.forEach { templateEx ->
@@ -78,29 +71,6 @@ class ExerciseRepository(private val dao: ExerciseDao) {
                 )
             )
         }
-    }
-
-    // Export CSV
-    suspend fun getCsvData(): String {
-        val workouts = dao.getAllWorkoutsOnce()
-        val csv = StringBuilder("Séance,Date,Exercice,Catégorie,Séries,Reps,Poids(kg),Note,PR\n")
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-        
-        workouts.forEach { w ->
-            w.exercises.forEach { exWithSets ->
-                val e = exWithSets.exercise
-                csv.append("${w.session.title},")
-                csv.append("${dateFormat.format(Date(w.session.date))},")
-                csv.append("${e.name},")
-                csv.append("${e.category},")
-                csv.append("${e.sets},")
-                csv.append("${e.reps},")
-                csv.append("${e.weight},")
-                csv.append("${e.note.replace(",", " ")},")
-                csv.append("${if (e.isPR) "OUI" else "NON"}\n")
-            }
-        }
-        return csv.toString()
     }
 
     suspend fun getMuscuBackupData(): MuscuBackupFile {
@@ -133,7 +103,8 @@ class ExerciseRepository(private val dao: ExerciseDao) {
                                     weight = s.weight,
                                     isCompleted = s.isCompleted,
                                     isWarmup = s.isWarmup,
-                                    timestamp = s.timestamp
+                                    timestamp = s.timestamp,
+                                    order = s.order
                                 )
                             }
                         )
@@ -200,7 +171,8 @@ class ExerciseRepository(private val dao: ExerciseDao) {
                             weight = sDto.weight,
                             isCompleted = sDto.isCompleted,
                             isWarmup = sDto.isWarmup,
-                            timestamp = sDto.timestamp
+                            timestamp = sDto.timestamp,
+                            order = sDto.order
                         ))
                     }
                 }

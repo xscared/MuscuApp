@@ -18,7 +18,7 @@ import javax.inject.Inject
 class MuscuBackupManager @Inject constructor(
     private val repository: ExerciseRepository,
     private val userPrefs: UserPrefs,
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context,
 ) {
     suspend fun createBackup(uri: Uri): Result<Unit> = withContext(Dispatchers.IO) {
         try {
@@ -34,7 +34,7 @@ class MuscuBackupManager @Inject constructor(
 
             val dataWithPrefs = backupData.copy(
                 weightUnit = currentUnit.name,
-                preferredWorkoutNamesByDay = scheduleNames
+                preferredWorkoutNamesByDay = scheduleNames,
             )
             
             val gson = Gson()
@@ -72,7 +72,7 @@ class MuscuBackupManager @Inject constructor(
             // Restore UserPrefs
             val unitToRestore = try {
                 WeightUnit.valueOf(backup.weightUnit)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 WeightUnit.KG
             }
             userPrefs.setWeightUnit(unitToRestore)

@@ -3,10 +3,10 @@ package com.example.muscuapp.ui.screens
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.net.toUri
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -21,7 +21,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.muscuapp.data.local.WorkoutSessionEntity
 import com.example.muscuapp.data.local.WorkoutWithExercisesAndSets
 import com.example.muscuapp.data.prefs.WeightUnit
 import com.example.muscuapp.data.prefs.ThemeMode
@@ -50,17 +49,17 @@ fun HomeScreen(
     val alarmSound by viewModel.alarmSound.collectAsState()
     val context = LocalContext.current
     
-    var showAddSheet by remember { mutableStateOf(false) }
-    var showTemplateDialog by remember { mutableStateOf(false) }
+    val showAddSheet = remember { mutableStateOf(false) }
+    val showTemplateDialog = remember { mutableStateOf(false) }
     var newWorkoutTitle by remember { mutableStateOf("") }
     
-    var showSettingsSheet by remember { mutableStateOf(false) }
-    var selectedScheduleDay by remember { mutableStateOf<Int?>(null) }
+    val showSettingsSheet = remember { mutableStateOf(false) }
+    val selectedScheduleDay = remember { mutableStateOf<Int?>(null) }
     
     var selectedWorkoutForActions by remember { mutableStateOf<WorkoutWithExercisesAndSets?>(null) }
-    var showWorkoutActions by remember { mutableStateOf(false) }
-    var showRenameSheet by remember { mutableStateOf(false) }
-    var showDeleteConfirm by remember { mutableStateOf(false) }
+    val showWorkoutActions = remember { mutableStateOf(false) }
+    val showRenameSheet = remember { mutableStateOf(false) }
+    val showDeleteConfirm = remember { mutableStateOf(false) }
     var renameValue by remember { mutableStateOf("") }
     val workoutsById = remember(workouts) { workouts.associateBy { it.session.sessionId } }
     val preferredWorkoutIdsByDay by viewModel.preferredWorkoutIdsByDay.collectAsState()
@@ -69,8 +68,8 @@ fun HomeScreen(
     }
 
     val closeSettingsSheet = {
-        showSettingsSheet = false
-        selectedScheduleDay = null
+        showSettingsSheet.value = false
+        selectedScheduleDay.value = null
     }
 
     val exportBackupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
@@ -91,7 +90,12 @@ fun HomeScreen(
 
     val alarmPickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == android.app.Activity.RESULT_OK) {
-            val uri = result.data?.getParcelableExtra<android.net.Uri>(android.media.RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+            val uri = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                result.data?.getParcelableExtra(android.media.RingtoneManager.EXTRA_RINGTONE_PICKED_URI, android.net.Uri::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                result.data?.getParcelableExtra(android.media.RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+            }
             viewModel.setAlarmSound(uri?.toString())
         }
     }
@@ -100,7 +104,7 @@ fun HomeScreen(
         title = "Mes Séances",
         bottomBar = {
             Row(
-                modifier = Modifier.fillMaxSize().muscuClickable { showAddSheet = true },
+                modifier = Modifier.fillMaxSize().muscuClickable { showAddSheet.value = true },
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
@@ -159,7 +163,7 @@ fun HomeScreen(
                     icon = Icons.Default.Settings,
                     color = MuscuTheme.colors.textSecondary,
                     modifier = Modifier.weight(1f),
-                    onClick = { showSettingsSheet = true }
+                    onClick = { showSettingsSheet.value = true }
                 )
             }
         }
@@ -183,7 +187,7 @@ fun HomeScreen(
                     onClick = { onWorkoutClick(workout.session.sessionId) },
                     onLongClick = {
                         selectedWorkoutForActions = workout
-                        showWorkoutActions = true
+                        showWorkoutActions.value = true
                     }
                 )
             }
@@ -192,7 +196,7 @@ fun HomeScreen(
 
     // --- CUSTOM SETTINGS SHEET ---
     MuscuActionSheet(
-        visible = showSettingsSheet,
+        visible = showSettingsSheet.value,
         onDismiss = closeSettingsSheet,
         title = "Paramètres"
     ) {
@@ -257,7 +261,7 @@ fun HomeScreen(
                 label = "${dayOfWeekLabel(dayOfWeek)} : $selectedWorkoutTitle",
                 icon = Icons.Default.CalendarToday,
                 color = if (selectedWorkoutId != null) MuscuTheme.colors.primary else MuscuTheme.colors.textPrimary,
-                onClick = { selectedScheduleDay = dayOfWeek }
+                onClick = { selectedScheduleDay.value = dayOfWeek }
             )
         }
 
@@ -268,7 +272,7 @@ fun HomeScreen(
                 val intent = Intent(android.media.RingtoneManager.ACTION_RINGTONE_PICKER).apply {
                     putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TYPE, android.media.RingtoneManager.TYPE_ALARM)
                     putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TITLE, "Choisir une alarme")
-                    putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, alarmSound?.let { android.net.Uri.parse(it) })
+                    putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, alarmSound?.toUri())
                     putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
                     putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
                 }
@@ -300,11 +304,11 @@ fun HomeScreen(
     }
 
     MuscuActionSheet(
-        visible = selectedScheduleDay != null,
-        onDismiss = { selectedScheduleDay = null },
-        title = selectedScheduleDay?.let { dayOfWeekLabel(it) }?.let { "Séance pour $it" }
+        visible = selectedScheduleDay.value != null,
+        onDismiss = { selectedScheduleDay.value = null },
+        title = selectedScheduleDay.value?.let { dayOfWeekLabel(it) }?.let { "Séance pour $it" }
     ) {
-        val selectedDay = selectedScheduleDay
+        val selectedDay = selectedScheduleDay.value
         if (selectedDay != null) {
             val currentWorkoutId = preferredWorkoutIdsByDay[selectedDay]
 
@@ -321,7 +325,7 @@ fun HomeScreen(
                 color = if (currentWorkoutId == null) MuscuTheme.colors.primary else MuscuTheme.colors.textPrimary,
                 onClick = {
                     viewModel.setPreferredWorkoutForDay(selectedDay, null)
-                    selectedScheduleDay = null
+                    selectedScheduleDay.value = null
                 }
             )
 
@@ -341,7 +345,7 @@ fun HomeScreen(
                         color = if (isSelected) MuscuTheme.colors.primary else MuscuTheme.colors.textPrimary,
                         onClick = {
                             viewModel.setPreferredWorkoutForDay(selectedDay, workout.session.sessionId)
-                            selectedScheduleDay = null
+                            selectedScheduleDay.value = null
                         }
                     )
                 }
@@ -351,8 +355,8 @@ fun HomeScreen(
 
     // --- CUSTOM ADD WORKOUT SHEET (Replaces AlertDialog) ---
     MuscuActionSheet(
-        visible = showAddSheet,
-        onDismiss = { showAddSheet = false },
+        visible = showAddSheet.value,
+        onDismiss = { showAddSheet.value = false },
         title = "Nouvelle Séance"
     ) {
         Column(modifier = Modifier.padding(bottom = 16.dp)) {
@@ -369,7 +373,7 @@ fun HomeScreen(
                         viewModel.createWorkout(newWorkoutTitle) { id ->
                             onWorkoutClick(id)
                         }
-                        showAddSheet = false
+                        showAddSheet.value = false
                         newWorkoutTitle = ""
                     }
                 },
@@ -378,10 +382,10 @@ fun HomeScreen(
         }
     }
 
-    if (showTemplateDialog) {
+    if (showTemplateDialog.value) {
         MuscuActionSheet(
-            visible = showTemplateDialog,
-            onDismiss = { showTemplateDialog = false },
+            visible = showTemplateDialog.value,
+            onDismiss = { showTemplateDialog.value = false },
             title = "Démarrer un modèle"
         ) {
             templates.forEach { template ->
@@ -390,7 +394,7 @@ fun HomeScreen(
                     icon = Icons.Default.ContentPaste,
                     onClick = {
                         viewModel.createWorkoutFromTemplate(template)
-                        showTemplateDialog = false
+                        showTemplateDialog.value = false
                     }
                 )
             }
@@ -399,8 +403,8 @@ fun HomeScreen(
 
     // --- WORKOUT ACTIONS SHEET ---
     MuscuActionSheet(
-        visible = showWorkoutActions,
-        onDismiss = { showWorkoutActions = false },
+        visible = showWorkoutActions.value,
+        onDismiss = { showWorkoutActions.value = false },
         title = selectedWorkoutForActions?.session?.title?.uppercase() ?: "SÉANCE"
     ) {
         MuscuActionItem(
@@ -408,8 +412,8 @@ fun HomeScreen(
             icon = Icons.Default.Edit,
             onClick = {
                 renameValue = selectedWorkoutForActions?.session?.title ?: ""
-                showWorkoutActions = false
-                showRenameSheet = true
+                showWorkoutActions.value = false
+                showRenameSheet.value = true
             }
         )
         MuscuActionItem(
@@ -417,33 +421,33 @@ fun HomeScreen(
             icon = Icons.Default.Delete,
             color = MuscuTheme.colors.error,
             onClick = {
-                showDeleteConfirm = true
-                showWorkoutActions = false
+                showDeleteConfirm.value = true
+                showWorkoutActions.value = false
             }
         )
     }
 
     MuscuConfirmDialog(
-        visible = showDeleteConfirm && selectedWorkoutForActions != null,
+        visible = showDeleteConfirm.value && selectedWorkoutForActions != null,
         title = "Supprimer la séance ?",
         message = "Voulez-vous vraiment supprimer '${selectedWorkoutForActions?.session?.title ?: ""}' ? Cette action est irréversible.",
         confirmText = "SUPPRIMER",
         dismissText = "ANNULER",
         onConfirm = {
             selectedWorkoutForActions?.let { viewModel.deleteWorkout(it.session) }
-            showDeleteConfirm = false
+            showDeleteConfirm.value = false
             selectedWorkoutForActions = null
         },
         onDismiss = {
-            showDeleteConfirm = false
+            showDeleteConfirm.value = false
             selectedWorkoutForActions = null
         }
     )
 
     // --- RENAME SHEET ---
     MuscuActionSheet(
-        visible = showRenameSheet,
-        onDismiss = { showRenameSheet = false },
+        visible = showRenameSheet.value,
+        onDismiss = { showRenameSheet.value = false },
         title = "Renommer la séance"
     ) {
         Column(modifier = Modifier.padding(bottom = 16.dp)) {
@@ -459,7 +463,7 @@ fun HomeScreen(
                     selectedWorkoutForActions?.let { 
                         viewModel.renameWorkout(it.session, renameValue)
                     }
-                    showRenameSheet = false
+                    showRenameSheet.value = false
                 },
                 modifier = Modifier.fillMaxWidth()
             )

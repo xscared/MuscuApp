@@ -1,14 +1,12 @@
 package com.example.muscuapp.ui.screens
 
 import android.content.Intent
-import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -55,11 +53,11 @@ fun LiveWorkoutScreen(
     val workout = workouts?.find { it.session.sessionId == sessionId }
     val context = LocalContext.current
     
-    var timeElapsed by remember { mutableStateOf(0L) }
-    var showFinishSummary by remember { mutableStateOf(false) }
+    var timeElapsed by remember { mutableLongStateOf(0L) }
+    val showFinishSummary = remember { mutableStateOf(false) }
     var setToDelete by remember { mutableStateOf<ExerciseSetEntity?>(null) }
 
-    var showRestTimeSelector by remember { mutableStateOf(false) }
+    val showRestTimeSelector = remember { mutableStateOf(false) }
 
     LaunchedEffect(workout?.session?.startTime) {
         val startTime = workout?.session?.startTime ?: System.currentTimeMillis()
@@ -78,7 +76,7 @@ fun LiveWorkoutScreen(
                 onNavigationClick = onBack,
                 actions = {
                     TextButton(
-                        onClick = { showFinishSummary = true },
+                        onClick = { showFinishSummary.value = true },
                         colors = ButtonDefaults.textButtonColors(contentColor = MuscuTheme.colors.error)
                     ) {
                         Text("TERMINER", fontWeight = FontWeight.Bold)
@@ -119,7 +117,7 @@ fun LiveWorkoutScreen(
                             onToggleSet = { set, completed ->
                                 viewModel.toggleSetCompletion(set, completed)
                                 if (completed) {
-                                    showRestTimeSelector = true
+                                    showRestTimeSelector.value = true
                                 }
                             },
                             onUpdateSet = { set ->
@@ -156,7 +154,7 @@ fun LiveWorkoutScreen(
             }
         )
 
-        if (showRestTimeSelector) {
+        if (showRestTimeSelector.value) {
             var customTime by remember { mutableStateOf(TextFieldValue("60", selection = TextRange(0, 2))) }
             var isCustom by remember { mutableStateOf(false) }
             val focusRequester = remember { FocusRequester() }
@@ -180,9 +178,9 @@ fun LiveWorkoutScreen(
                         )
 
                         if (!isCustom) {
-                            MuscuButton(text = "1 MIN", onClick = { startTimer(context, 60, sessionId); showRestTimeSelector = false }, modifier = Modifier.fillMaxWidth())
-                            MuscuButton(text = "1 MIN 30S", onClick = { startTimer(context, 90, sessionId); showRestTimeSelector = false }, modifier = Modifier.fillMaxWidth())
-                            MuscuButton(text = "2 MIN", onClick = { startTimer(context, 120, sessionId); showRestTimeSelector = false }, modifier = Modifier.fillMaxWidth())
+                            MuscuButton(text = "1 MIN", onClick = { startTimer(context, 60, sessionId); showRestTimeSelector.value = false }, modifier = Modifier.fillMaxWidth())
+                            MuscuButton(text = "1 MIN 30S", onClick = { startTimer(context, 90, sessionId); showRestTimeSelector.value = false }, modifier = Modifier.fillMaxWidth())
+                            MuscuButton(text = "2 MIN", onClick = { startTimer(context, 120, sessionId); showRestTimeSelector.value = false }, modifier = Modifier.fillMaxWidth())
                             TextButton(
                                 onClick = { isCustom = true },
                                 modifier = Modifier.fillMaxWidth()
@@ -208,14 +206,14 @@ fun LiveWorkoutScreen(
                                 onClick = {
                                     val secs = customTime.text.toIntOrNull() ?: 60
                                     startTimer(context, secs, sessionId)
-                                    showRestTimeSelector = false
+                                    showRestTimeSelector.value = false
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
 
                         TextButton(
-                            onClick = { showRestTimeSelector = false },
+                            onClick = { showRestTimeSelector.value = false },
                             modifier = Modifier.align(Alignment.End)
                         ) {
                             Text("PASSER", color = MuscuTheme.colors.textSecondary)
@@ -225,7 +223,7 @@ fun LiveWorkoutScreen(
             }
         }
 
-        if (showFinishSummary && workout != null) {
+        if (showFinishSummary.value && workout != null) {
             val totalVolume = workout.exercises.sumOf { ex ->
                 ex.sets.filter { it.isCompleted }.sumOf { (it.weight * it.reps).toDouble() }
             }
@@ -316,7 +314,7 @@ fun LiveExerciseCard(
             }
 
             val sortedSets = exerciseWithSets.sets.sortedWith(
-                compareBy<ExerciseSetEntity> { !it.isWarmup }
+                compareBy<ExerciseSetEntity> { it.order }
                     .thenBy { it.timestamp }
                     .thenBy { it.setId }
             )

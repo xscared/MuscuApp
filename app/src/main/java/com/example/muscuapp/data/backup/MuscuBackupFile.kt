@@ -47,7 +47,8 @@ data class SetBackupDto(
     val weight: Float,
     val isCompleted: Boolean = false,
     val isWarmup: Boolean = false,
-    val timestamp: Long
+    val timestamp: Long,
+    val order: Int = 0
 )
 
 data class TemplateBackupDto(
