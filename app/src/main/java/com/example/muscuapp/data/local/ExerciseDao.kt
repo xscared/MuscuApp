@@ -49,8 +49,8 @@ interface ExerciseDao {
     @Query("UPDATE exercises SET weight = :weight, reps = :reps, sets = :sets, category = :category, note = :note WHERE name = :name")
     suspend fun syncExerciseAllDataByName(name: String, weight: Float, reps: Int, sets: Int, category: String, note: String)
 
-    @Query("UPDATE exercise_sets SET weight = :weight, reps = :reps WHERE `order` = :order AND exerciseId IN (SELECT id FROM exercises WHERE name = :name)")
-    suspend fun syncSetByOrderAndName(name: String, order: Int, weight: Float, reps: Int)
+    @Query("UPDATE exercise_sets SET weight = :weight, reps = :reps WHERE `order` = :order AND isWarmup = :isWarmup AND exerciseId IN (SELECT id FROM exercises WHERE name = :name)")
+    suspend fun syncSetByOrderAndName(name: String, order: Int, isWarmup: Boolean, weight: Float, reps: Int)
 
     @Query("UPDATE template_exercises SET defaultWeight = :weight, defaultReps = :reps, defaultSets = :sets, category = :category WHERE name = :name")
     suspend fun syncTemplatesByName(name: String, weight: Float, reps: Int, sets: Int, category: String)
@@ -80,7 +80,7 @@ interface ExerciseDao {
         updateSet(set)
         val name = getExerciseNameById(set.exerciseId)
         if (name != null) {
-            syncSetByOrderAndName(name, set.order, set.weight, set.reps)
+            syncSetByOrderAndName(name, set.order, set.isWarmup, set.weight, set.reps)
         }
     }
 

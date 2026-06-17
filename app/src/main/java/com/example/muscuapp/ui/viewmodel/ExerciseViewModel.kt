@@ -201,7 +201,7 @@ class ExerciseViewModel @Inject constructor(
     // --- Live Mode Actions ---
     fun toggleSetCompletion(set: ExerciseSetEntity, isCompleted: Boolean) {
         viewModelScope.launch {
-            repository.updateSet(set.copy(isCompleted = isCompleted))
+            repository.updateSetCompletionOnly(set.copy(isCompleted = isCompleted))
         }
     }
 
@@ -223,7 +223,7 @@ class ExerciseViewModel @Inject constructor(
             repository.getExercisesWithSetsForSession(session.sessionId).first().forEach { exerciseWithSets ->
                 exerciseWithSets.sets.forEach { set ->
                     if (set.isCompleted) {
-                        repository.updateSet(set.copy(isCompleted = false))
+                        repository.updateSetCompletionOnly(set.copy(isCompleted = false))
                     }
                 }
             }
