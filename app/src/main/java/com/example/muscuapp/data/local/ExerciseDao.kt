@@ -80,9 +80,7 @@ interface ExerciseDao {
         updateSet(set)
         val name = getExerciseNameById(set.exerciseId)
         if (name != null) {
-            syncExerciseDataByName(name, set.weight, set.reps)
             syncSetByOrderAndName(name, set.order, set.weight, set.reps)
-            syncTemplatesValuesByName(name, set.weight, set.reps)
         }
     }
 
