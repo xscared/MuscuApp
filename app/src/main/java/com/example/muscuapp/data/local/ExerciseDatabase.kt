@@ -11,7 +11,7 @@ import androidx.room.RoomDatabase
         TemplateExerciseEntity::class,
         ExerciseSetEntity::class
     ], 
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 abstract class ExerciseDatabase : RoomDatabase() {

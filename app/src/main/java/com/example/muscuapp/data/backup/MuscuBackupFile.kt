@@ -30,6 +30,7 @@ data class WorkoutBackupDto(
 
 data class ExerciseBackupDto(
     val name: String,
+    val exerciseDefinitionId: String = name.toExerciseDefinitionId(),
     val setsCount: Int,
     val repsCount: Int,
     val weight: Float,
@@ -58,6 +59,7 @@ data class TemplateBackupDto(
 
 data class TemplateExerciseBackupDto(
     val name: String,
+    val exerciseDefinitionId: String = name.toExerciseDefinitionId(),
     val defaultSets: Int,
     val defaultReps: Int,
     val defaultWeight: Float,

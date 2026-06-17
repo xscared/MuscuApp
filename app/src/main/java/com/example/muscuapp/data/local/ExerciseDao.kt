@@ -43,26 +43,45 @@ interface ExerciseDao {
     @Query("SELECT name FROM exercises WHERE id = :exerciseId")
     suspend fun getExerciseNameById(exerciseId: Long): String?
 
-    @Query("UPDATE exercises SET weight = :weight, reps = :reps WHERE name = :name")
-    suspend fun syncExerciseDataByName(name: String, weight: Float, reps: Int)
+    @Query("SELECT exerciseDefinitionId FROM exercises WHERE id = :exerciseId")
+    suspend fun getExerciseDefinitionIdById(exerciseId: Long): String?
 
-    @Query("UPDATE exercises SET weight = :weight, reps = :reps, sets = :sets, category = :category, note = :note WHERE name = :name")
-    suspend fun syncExerciseAllDataByName(name: String, weight: Float, reps: Int, sets: Int, category: String, note: String)
+    @Query("UPDATE exercises SET weight = :weight, reps = :reps WHERE exerciseDefinitionId = :exerciseDefinitionId")
+    suspend fun syncExerciseDataByDefinition(exerciseDefinitionId: String, weight: Float, reps: Int)
 
-    @Query("UPDATE exercise_sets SET weight = :weight, reps = :reps WHERE `order` = :order AND isWarmup = :isWarmup AND exerciseId IN (SELECT id FROM exercises WHERE name = :name)")
-    suspend fun syncSetByOrderAndName(name: String, order: Int, isWarmup: Boolean, weight: Float, reps: Int)
+    @Query("UPDATE exercises SET name = :name, weight = :weight, reps = :reps, sets = :sets, category = :category, note = :note WHERE exerciseDefinitionId = :exerciseDefinitionId")
+    suspend fun syncExerciseAllDataByDefinition(exerciseDefinitionId: String, name: String, weight: Float, reps: Int, sets: Int, category: String, note: String)
 
-    @Query("UPDATE template_exercises SET defaultWeight = :weight, defaultReps = :reps, defaultSets = :sets, category = :category WHERE name = :name")
-    suspend fun syncTemplatesByName(name: String, weight: Float, reps: Int, sets: Int, category: String)
+    @Query("UPDATE exercise_sets SET weight = :weight, reps = :reps WHERE `order` = :order AND isWarmup = :isWarmup AND exerciseId IN (SELECT id FROM exercises WHERE exerciseDefinitionId = :exerciseDefinitionId)")
+    suspend fun syncSetByDefinitionOrderAndWarmup(exerciseDefinitionId: String, order: Int, isWarmup: Boolean, weight: Float, reps: Int)
 
-    @Query("UPDATE template_exercises SET defaultWeight = :weight, defaultReps = :reps WHERE name = :name")
-    suspend fun syncTemplatesValuesByName(name: String, weight: Float, reps: Int)
+    @Query("""
+        UPDATE exercises
+        SET
+            sets = (SELECT COUNT(*) FROM exercise_sets WHERE exerciseId = exercises.id AND isWarmup = 0),
+            weight = COALESCE((SELECT MAX(weight) FROM exercise_sets WHERE exerciseId = exercises.id AND isWarmup = 0), 0),
+            reps = COALESCE((
+                SELECT MAX(reps)
+                FROM exercise_sets
+                WHERE exerciseId = exercises.id
+                    AND isWarmup = 0
+                    AND weight = COALESCE((SELECT MAX(weight) FROM exercise_sets WHERE exerciseId = exercises.id AND isWarmup = 0), 0)
+            ), 0)
+        WHERE exerciseDefinitionId = :exerciseDefinitionId
+    """)
+    suspend fun refreshExerciseSummariesByDefinition(exerciseDefinitionId: String)
+
+    @Query("UPDATE template_exercises SET name = :name, defaultWeight = :weight, defaultReps = :reps, defaultSets = :sets, category = :category WHERE exerciseDefinitionId = :exerciseDefinitionId")
+    suspend fun syncTemplatesByDefinition(exerciseDefinitionId: String, name: String, weight: Float, reps: Int, sets: Int, category: String)
+
+    @Query("UPDATE template_exercises SET defaultWeight = :weight, defaultReps = :reps WHERE exerciseDefinitionId = :exerciseDefinitionId")
+    suspend fun syncTemplatesValuesByDefinition(exerciseDefinitionId: String, weight: Float, reps: Int)
 
     @Transaction
     suspend fun updateExerciseWithSync(exercise: ExerciseEntity) {
         updateExercise(exercise)
-        syncExerciseAllDataByName(exercise.name, exercise.weight, exercise.reps, exercise.sets, exercise.category, exercise.note)
-        syncTemplatesByName(exercise.name, exercise.weight, exercise.reps, exercise.sets, exercise.category)
+        syncExerciseAllDataByDefinition(exercise.exerciseDefinitionId, exercise.name, exercise.weight, exercise.reps, exercise.sets, exercise.category, exercise.note)
+        syncTemplatesByDefinition(exercise.exerciseDefinitionId, exercise.name, exercise.weight, exercise.reps, exercise.sets, exercise.category)
     }
 
     @Query("SELECT MAX(weight) FROM exercises WHERE name = :name")
@@ -78,9 +97,10 @@ interface ExerciseDao {
     @Transaction
     suspend fun updateSetWithSync(set: ExerciseSetEntity) {
         updateSet(set)
-        val name = getExerciseNameById(set.exerciseId)
-        if (name != null) {
-            syncSetByOrderAndName(name, set.order, set.isWarmup, set.weight, set.reps)
+        val exerciseDefinitionId = getExerciseDefinitionIdById(set.exerciseId)
+        if (exerciseDefinitionId != null) {
+            syncSetByDefinitionOrderAndWarmup(exerciseDefinitionId, set.order, set.isWarmup, set.weight, set.reps)
+            refreshExerciseSummariesByDefinition(exerciseDefinitionId)
         }
     }
 

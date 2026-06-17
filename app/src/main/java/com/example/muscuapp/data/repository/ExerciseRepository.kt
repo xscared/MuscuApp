@@ -65,6 +65,7 @@ class ExerciseRepository(private val dao: ExerciseDao) {
                 ExerciseEntity(
                     sessionId = sessionId,
                     name = templateEx.name,
+                    exerciseDefinitionId = templateEx.exerciseDefinitionId,
                     sets = templateEx.defaultSets,
                     reps = templateEx.defaultReps,
                     weight = templateEx.defaultWeight,
@@ -89,6 +90,7 @@ class ExerciseRepository(private val dao: ExerciseDao) {
                     exercises = w.exercises.map { e ->
                         ExerciseBackupDto(
                             name = e.exercise.name,
+                            exerciseDefinitionId = e.exercise.exerciseDefinitionId,
                             setsCount = e.exercise.sets,
                             repsCount = e.exercise.reps,
                             weight = e.exercise.weight,
@@ -118,6 +120,7 @@ class ExerciseRepository(private val dao: ExerciseDao) {
                     exercises = t.exercises.map { te ->
                         TemplateExerciseBackupDto(
                             name = te.name,
+                            exerciseDefinitionId = te.exerciseDefinitionId,
                             defaultSets = te.defaultSets,
                             defaultReps = te.defaultReps,
                             defaultWeight = te.defaultWeight,
@@ -154,6 +157,7 @@ class ExerciseRepository(private val dao: ExerciseDao) {
                     val exerciseId = dao.insertExercise(ExerciseEntity(
                         sessionId = sessionId,
                         name = eDto.name,
+                        exerciseDefinitionId = eDto.exerciseDefinitionId,
                         sets = eDto.setsCount,
                         reps = eDto.repsCount,
                         weight = eDto.weight,
@@ -185,6 +189,7 @@ class ExerciseRepository(private val dao: ExerciseDao) {
                     dao.insertTemplateExercise(TemplateExerciseEntity(
                         templateId = templateId,
                         name = teDto.name,
+                        exerciseDefinitionId = teDto.exerciseDefinitionId,
                         defaultSets = teDto.defaultSets,
                         defaultReps = teDto.defaultReps,
                         defaultWeight = teDto.defaultWeight,

@@ -18,12 +18,13 @@ data class WorkoutTemplateEntity(
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("templateId")]
+    indices = [Index("templateId"), Index("exerciseDefinitionId")]
 )
 data class TemplateExerciseEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val templateId: Long,
     val name: String,
+    val exerciseDefinitionId: String = name.toExerciseDefinitionId(),
     val defaultSets: Int,
     val defaultReps: Int,
     val defaultWeight: Float,

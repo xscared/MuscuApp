@@ -22,12 +22,13 @@ data class WorkoutSessionEntity(
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("sessionId")]
+    indices = [Index("sessionId"), Index("exerciseDefinitionId")]
 )
 data class ExerciseEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val sessionId: Long,
     val name: String,
+    val exerciseDefinitionId: String = name.toExerciseDefinitionId(),
     val sets: Int,
     val reps: Int,
     val weight: Float,
@@ -38,6 +39,9 @@ data class ExerciseEntity(
     val order: Int = 0,
     val date: Long = System.currentTimeMillis()
 )
+
+fun String.toExerciseDefinitionId(): String =
+    trim().ifBlank { "unnamed-exercise" }
 
 @Entity(
     tableName = "exercise_sets",
