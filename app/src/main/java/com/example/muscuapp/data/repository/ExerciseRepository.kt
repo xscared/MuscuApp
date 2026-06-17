@@ -41,7 +41,7 @@ class ExerciseRepository(private val dao: ExerciseDao) {
     }
 
     suspend fun updateExercise(exercise: ExerciseEntity) {
-        dao.updateExerciseWithSync(exercise)
+        dao.updateExercise(exercise)
     }
 
     suspend fun getPersonalRecord(name: String): Float? {
@@ -50,7 +50,7 @@ class ExerciseRepository(private val dao: ExerciseDao) {
 
     // --- Sets ---
     suspend fun insertSet(set: ExerciseSetEntity) = dao.insertSet(set)
-    suspend fun updateSet(set: ExerciseSetEntity) = dao.updateSetWithSync(set)
+    suspend fun updateSet(set: ExerciseSetEntity) = dao.updateSet(set)
     suspend fun deleteSet(set: ExerciseSetEntity) = dao.deleteSet(set)
     suspend fun deleteAllSetsForExercise(exerciseId: Long) = dao.deleteAllSetsForExercise(exerciseId)
 
