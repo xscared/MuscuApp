@@ -40,17 +40,11 @@ interface ExerciseDao {
     @Update
     suspend fun updateExercise(exercise: ExerciseEntity)
 
-    @Query("SELECT name FROM exercises WHERE id = :exerciseId")
-    suspend fun getExerciseNameById(exerciseId: Long): String?
-
     @Query("SELECT exerciseDefinitionId FROM exercises WHERE id = :exerciseId")
     suspend fun getExerciseDefinitionIdById(exerciseId: Long): String?
 
-    @Query("UPDATE exercises SET weight = :weight, reps = :reps WHERE exerciseDefinitionId = :exerciseDefinitionId")
-    suspend fun syncExerciseDataByDefinition(exerciseDefinitionId: String, weight: Float, reps: Int)
-
-    @Query("UPDATE exercises SET name = :name, weight = :weight, reps = :reps, sets = :sets, category = :category, note = :note WHERE exerciseDefinitionId = :exerciseDefinitionId")
-    suspend fun syncExerciseAllDataByDefinition(exerciseDefinitionId: String, name: String, weight: Float, reps: Int, sets: Int, category: String, note: String)
+    @Query("UPDATE exercises SET name = :name, category = :category WHERE exerciseDefinitionId = :exerciseDefinitionId")
+    suspend fun syncExerciseDetailsByDefinition(exerciseDefinitionId: String, name: String, category: String)
 
     @Query("UPDATE exercise_sets SET weight = :weight, reps = :reps WHERE `order` = :order AND isWarmup = :isWarmup AND exerciseId IN (SELECT id FROM exercises WHERE exerciseDefinitionId = :exerciseDefinitionId)")
     suspend fun syncSetByDefinitionOrderAndWarmup(exerciseDefinitionId: String, order: Int, isWarmup: Boolean, weight: Float, reps: Int)
@@ -71,17 +65,10 @@ interface ExerciseDao {
     """)
     suspend fun refreshExerciseSummariesByDefinition(exerciseDefinitionId: String)
 
-    @Query("UPDATE template_exercises SET name = :name, defaultWeight = :weight, defaultReps = :reps, defaultSets = :sets, category = :category WHERE exerciseDefinitionId = :exerciseDefinitionId")
-    suspend fun syncTemplatesByDefinition(exerciseDefinitionId: String, name: String, weight: Float, reps: Int, sets: Int, category: String)
-
-    @Query("UPDATE template_exercises SET defaultWeight = :weight, defaultReps = :reps WHERE exerciseDefinitionId = :exerciseDefinitionId")
-    suspend fun syncTemplatesValuesByDefinition(exerciseDefinitionId: String, weight: Float, reps: Int)
-
     @Transaction
     suspend fun updateExerciseWithSync(exercise: ExerciseEntity) {
         updateExercise(exercise)
-        syncExerciseAllDataByDefinition(exercise.exerciseDefinitionId, exercise.name, exercise.weight, exercise.reps, exercise.sets, exercise.category, exercise.note)
-        syncTemplatesByDefinition(exercise.exerciseDefinitionId, exercise.name, exercise.weight, exercise.reps, exercise.sets, exercise.category)
+        syncExerciseDetailsByDefinition(exercise.exerciseDefinitionId, exercise.name, exercise.category)
     }
 
     @Query("SELECT MAX(weight) FROM exercises WHERE name = :name")
@@ -90,6 +77,9 @@ interface ExerciseDao {
     // --- Sets ---
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSet(set: ExerciseSetEntity): Long
+
+    @Query("SELECT * FROM exercise_sets WHERE exerciseId = :exerciseId")
+    suspend fun getSetsForExerciseOnce(exerciseId: Long): List<ExerciseSetEntity>
 
     @Update
     suspend fun updateSet(set: ExerciseSetEntity)
@@ -100,6 +90,33 @@ interface ExerciseDao {
         val exerciseDefinitionId = getExerciseDefinitionIdById(set.exerciseId)
         if (exerciseDefinitionId != null) {
             syncSetByDefinitionOrderAndWarmup(exerciseDefinitionId, set.order, set.isWarmup, set.weight, set.reps)
+            refreshExerciseSummariesByDefinition(exerciseDefinitionId)
+        }
+    }
+
+    @Transaction
+    suspend fun replaceExerciseSetsWithSync(
+        exerciseId: Long,
+        desiredSets: List<ExerciseSetEntity>
+    ) {
+        val existingSets = getSetsForExerciseOnce(exerciseId)
+        val existingIds = existingSets.mapTo(mutableSetOf()) { it.setId }
+        val retainedIds = mutableSetOf<Long>()
+
+        desiredSets.forEach { desiredSet ->
+            if (desiredSet.setId != 0L && desiredSet.setId in existingIds) {
+                updateSetWithSync(desiredSet.copy(exerciseId = exerciseId))
+                retainedIds += desiredSet.setId
+            } else {
+                insertSet(desiredSet.copy(setId = 0, exerciseId = exerciseId))
+            }
+        }
+
+        existingSets
+            .filterNot { it.setId in retainedIds }
+            .forEach { deleteSet(it) }
+
+        getExerciseDefinitionIdById(exerciseId)?.let { exerciseDefinitionId ->
             refreshExerciseSummariesByDefinition(exerciseDefinitionId)
         }
     }

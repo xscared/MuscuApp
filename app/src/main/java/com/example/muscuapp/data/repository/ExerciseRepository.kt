@@ -33,7 +33,9 @@ class ExerciseRepository(private val dao: ExerciseDao) {
         dao.getExercisesWithSetsForSession(sessionId)
 
     suspend fun insertExercise(exercise: ExerciseEntity): Long {
-        return dao.insertExercise(exercise)
+        return dao.insertExercise(
+            exercise.copy(exerciseDefinitionId = exercise.exerciseDefinitionId.toExerciseDefinitionId())
+        )
     }
 
     suspend fun deleteExercise(exercise: ExerciseEntity) {
@@ -54,6 +56,8 @@ class ExerciseRepository(private val dao: ExerciseDao) {
     suspend fun updateSetCompletionOnly(set: ExerciseSetEntity) = dao.updateSet(set)
     suspend fun deleteSet(set: ExerciseSetEntity) = dao.deleteSet(set)
     suspend fun deleteAllSetsForExercise(exerciseId: Long) = dao.deleteAllSetsForExercise(exerciseId)
+    suspend fun replaceExerciseSetsWithSync(exerciseId: Long, sets: List<ExerciseSetEntity>) =
+        dao.replaceExerciseSetsWithSync(exerciseId, sets)
 
     // Templates
     fun getAllTemplates(): Flow<List<TemplateWithExercises>> = dao.getAllTemplates()
@@ -65,7 +69,7 @@ class ExerciseRepository(private val dao: ExerciseDao) {
                 ExerciseEntity(
                     sessionId = sessionId,
                     name = templateEx.name,
-                    exerciseDefinitionId = templateEx.exerciseDefinitionId,
+                    exerciseDefinitionId = templateEx.exerciseDefinitionId.toExerciseDefinitionId(),
                     sets = templateEx.defaultSets,
                     reps = templateEx.defaultReps,
                     weight = templateEx.defaultWeight,
@@ -157,7 +161,7 @@ class ExerciseRepository(private val dao: ExerciseDao) {
                     val exerciseId = dao.insertExercise(ExerciseEntity(
                         sessionId = sessionId,
                         name = eDto.name,
-                        exerciseDefinitionId = eDto.exerciseDefinitionId,
+                        exerciseDefinitionId = eDto.exerciseDefinitionId.toExerciseDefinitionId(),
                         sets = eDto.setsCount,
                         reps = eDto.repsCount,
                         weight = eDto.weight,
@@ -189,7 +193,7 @@ class ExerciseRepository(private val dao: ExerciseDao) {
                     dao.insertTemplateExercise(TemplateExerciseEntity(
                         templateId = templateId,
                         name = teDto.name,
-                        exerciseDefinitionId = teDto.exerciseDefinitionId,
+                        exerciseDefinitionId = teDto.exerciseDefinitionId.toExerciseDefinitionId(),
                         defaultSets = teDto.defaultSets,
                         defaultReps = teDto.defaultReps,
                         defaultWeight = teDto.defaultWeight,

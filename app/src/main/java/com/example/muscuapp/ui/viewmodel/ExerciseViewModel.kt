@@ -16,7 +16,9 @@ import javax.inject.Inject
 data class SetInfo(
     val reps: Int,
     val weight: Float,
-    val isWarmup: Boolean = false
+    val isWarmup: Boolean = false,
+    val persistedSetId: Long? = null,
+    val persistedOrder: Int? = null
 )
 
 @HiltViewModel
@@ -157,20 +159,20 @@ class ExerciseViewModel @Inject constructor(
                 weight = maxWeight
             )
             repository.updateExercise(updatedExercise)
-            
-            // Mise à jour des séries : on supprime et on remplace (plus simple pour le moment)
-            repository.deleteAllSetsForExercise(exercise.id)
-            sets.forEachIndexed { index, setInfo ->
-                repository.insertSet(
+
+            repository.replaceExerciseSetsWithSync(
+                exerciseId = exercise.id,
+                sets = sets.mapIndexed { index, setInfo ->
                     ExerciseSetEntity(
+                        setId = setInfo.persistedSetId ?: 0,
                         exerciseId = exercise.id,
                         reps = setInfo.reps,
                         weight = setInfo.weight,
                         isWarmup = setInfo.isWarmup,
-                        order = index
+                        order = setInfo.persistedOrder ?: index
                     )
-                )
-            }
+                }
+            )
         }
     }
 

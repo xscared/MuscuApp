@@ -1,6 +1,7 @@
 package com.example.muscuapp.data.local
 
 import androidx.room.*
+import java.util.Locale
 
 @Entity(tableName = "workout_sessions")
 data class WorkoutSessionEntity(
@@ -40,8 +41,16 @@ data class ExerciseEntity(
     val date: Long = System.currentTimeMillis()
 )
 
-fun String.toExerciseDefinitionId(): String =
-    trim().ifBlank { "unnamed-exercise" }
+private const val EXERCISE_DEFINITION_ID_PREFIX = "exercise:"
+
+fun String.toExerciseDefinitionId(): String {
+    val normalized = trim().lowercase(Locale.ROOT).ifBlank { "unnamed-exercise" }
+    return if (normalized.startsWith(EXERCISE_DEFINITION_ID_PREFIX)) {
+        normalized
+    } else {
+        "$EXERCISE_DEFINITION_ID_PREFIX$normalized"
+    }
+}
 
 @Entity(
     tableName = "exercise_sets",

@@ -33,7 +33,9 @@ data class SetDraft(
     val id: Long = System.nanoTime(), // Pour la clé Compose
     val reps: String = "10",
     val weight: String = "20",
-    val isWarmup: Boolean = false
+    val isWarmup: Boolean = false,
+    val persistedSetId: Long? = null,
+    val persistedOrder: Int? = null
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -61,12 +63,20 @@ fun AddExerciseScreen(
             name = it.exercise.name
             category = it.exercise.category
             note = it.exercise.note
-            setDrafts = it.sets.map { set ->
+            setDrafts = it.sets
+                .sortedWith(
+                    compareBy<com.example.muscuapp.data.local.ExerciseSetEntity> { set -> set.order }
+                        .thenBy { set -> set.timestamp }
+                        .thenBy { set -> set.setId }
+                )
+                .map { set ->
                 SetDraft(
                     id = set.setId,
                     reps = set.reps.toString(),
                     weight = set.weight.toString(),
-                    isWarmup = set.isWarmup
+                    isWarmup = set.isWarmup,
+                    persistedSetId = set.setId,
+                    persistedOrder = set.order
                 )
             }
         }
@@ -308,7 +318,9 @@ fun AddExerciseScreen(
                             SetInfo(
                                 reps = draft.reps.toIntOrNull() ?: 0,
                                 weight = draft.weight.toFloatOrNull() ?: 0f,
-                                isWarmup = draft.isWarmup
+                                isWarmup = draft.isWarmup,
+                                persistedSetId = draft.persistedSetId,
+                                persistedOrder = draft.persistedOrder
                             )
                         }
 
