@@ -215,7 +215,7 @@ class ExerciseDaoSyncTest {
     }
 
     @Test
-    fun replaceExerciseSetsWithSync_updatesPersistedMatchingSets() = runBlocking {
+    fun replaceExerciseSetsWithSync_synchronizesValuesAndSetCount() = runBlocking {
         val firstSessionId = dao.insertWorkout(WorkoutSessionEntity(title = "Session A"))
         val secondSessionId = dao.insertWorkout(WorkoutSessionEntity(title = "Session B"))
         val firstExerciseId = dao.insertExercise(
@@ -262,22 +262,55 @@ class ExerciseDaoSyncTest {
                     reps = 8,
                     weight = 60f,
                     order = 1
+                ),
+                ExerciseSetEntity(
+                    exerciseId = firstExerciseId,
+                    reps = 6,
+                    weight = 65f,
+                    order = 2
                 )
             )
         )
 
         val updatedExercises = dao.getAllWorkoutsOnce().flatMap { it.exercises }
         updatedExercises.forEach { exerciseWithSets ->
-            assertEquals(2, exerciseWithSets.sets.size)
+            assertEquals(3, exerciseWithSets.sets.size)
             val orderZero = exerciseWithSets.sets.single { it.order == 0 }
             val orderOne = exerciseWithSets.sets.single { it.order == 1 }
+            val orderTwo = exerciseWithSets.sets.single { it.order == 2 }
             assertEquals(40f, orderZero.weight, 0.001f)
             assertEquals(10, orderZero.reps)
             assertEquals(60f, orderOne.weight, 0.001f)
             assertEquals(8, orderOne.reps)
-            assertEquals(60f, exerciseWithSets.exercise.weight, 0.001f)
-            assertEquals(8, exerciseWithSets.exercise.reps)
-            assertEquals(2, exerciseWithSets.exercise.sets)
+            assertEquals(65f, orderTwo.weight, 0.001f)
+            assertEquals(6, orderTwo.reps)
+            assertEquals(65f, exerciseWithSets.exercise.weight, 0.001f)
+            assertEquals(6, exerciseWithSets.exercise.reps)
+            assertEquals(3, exerciseWithSets.exercise.sets)
+        }
+
+        dao.replaceExerciseSetsWithSync(
+            exerciseId = firstExerciseId,
+            desiredSets = listOf(
+                ExerciseSetEntity(
+                    setId = firstOrderZeroId,
+                    exerciseId = firstExerciseId,
+                    reps = 12,
+                    weight = 50f,
+                    order = 0
+                )
+            )
+        )
+
+        val reducedExercises = dao.getAllWorkoutsOnce().flatMap { it.exercises }
+        reducedExercises.forEach { exerciseWithSets ->
+            assertEquals(1, exerciseWithSets.sets.size)
+            val onlySet = exerciseWithSets.sets.single()
+            assertEquals(50f, onlySet.weight, 0.001f)
+            assertEquals(12, onlySet.reps)
+            assertEquals(50f, exerciseWithSets.exercise.weight, 0.001f)
+            assertEquals(12, exerciseWithSets.exercise.reps)
+            assertEquals(1, exerciseWithSets.exercise.sets)
         }
     }
 }

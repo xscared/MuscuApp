@@ -43,6 +43,9 @@ interface ExerciseDao {
     @Query("SELECT exerciseDefinitionId FROM exercises WHERE id = :exerciseId")
     suspend fun getExerciseDefinitionIdById(exerciseId: Long): String?
 
+    @Query("SELECT id FROM exercises WHERE exerciseDefinitionId = :exerciseDefinitionId")
+    suspend fun getExerciseIdsByDefinition(exerciseDefinitionId: String): List<Long>
+
     @Query("UPDATE exercises SET name = :name, category = :category WHERE exerciseDefinitionId = :exerciseDefinitionId")
     suspend fun syncExerciseDetailsByDefinition(exerciseDefinitionId: String, name: String, category: String)
 
@@ -99,26 +102,68 @@ interface ExerciseDao {
         exerciseId: Long,
         desiredSets: List<ExerciseSetEntity>
     ) {
-        val existingSets = getSetsForExerciseOnce(exerciseId)
-        val existingIds = existingSets.mapTo(mutableSetOf()) { it.setId }
-        val retainedIds = mutableSetOf<Long>()
+        val exerciseDefinitionId = getExerciseDefinitionIdById(exerciseId) ?: return
+        val desiredRegularSets = desiredSets.filterNot { it.isWarmup }
+        val desiredWarmupSets = desiredSets.filter { it.isWarmup }
 
-        desiredSets.forEach { desiredSet ->
-            if (desiredSet.setId != 0L && desiredSet.setId in existingIds) {
-                updateSetWithSync(desiredSet.copy(exerciseId = exerciseId))
-                retainedIds += desiredSet.setId
+        getExerciseIdsByDefinition(exerciseDefinitionId).forEach { linkedExerciseId ->
+            val existingSets = getSetsForExerciseOnce(linkedExerciseId)
+            reconcileSetType(
+                linkedExerciseId = linkedExerciseId,
+                desiredSets = desiredRegularSets,
+                existingSets = existingSets.filterNot { it.isWarmup },
+                isWarmup = false
+            )
+            reconcileSetType(
+                linkedExerciseId = linkedExerciseId,
+                desiredSets = desiredWarmupSets,
+                existingSets = existingSets.filter { it.isWarmup },
+                isWarmup = true
+            )
+        }
+
+        refreshExerciseSummariesByDefinition(exerciseDefinitionId)
+    }
+
+    private suspend fun reconcileSetType(
+        linkedExerciseId: Long,
+        desiredSets: List<ExerciseSetEntity>,
+        existingSets: List<ExerciseSetEntity>,
+        isWarmup: Boolean
+    ) {
+        val sortedExistingSets = existingSets.sortedWith(
+            compareBy<ExerciseSetEntity> { it.order }
+                .thenBy { it.timestamp }
+                .thenBy { it.setId }
+        )
+
+        desiredSets.forEachIndexed { index, desiredSet ->
+            val existingSet = sortedExistingSets.getOrNull(index)
+            if (existingSet == null) {
+                insertSet(
+                    ExerciseSetEntity(
+                        exerciseId = linkedExerciseId,
+                        reps = desiredSet.reps,
+                        weight = desiredSet.weight,
+                        isWarmup = isWarmup,
+                        order = index
+                    )
+                )
             } else {
-                insertSet(desiredSet.copy(setId = 0, exerciseId = exerciseId))
+                updateSet(
+                    existingSet.copy(
+                        reps = desiredSet.reps,
+                        weight = desiredSet.weight,
+                        isWarmup = isWarmup,
+                        order = index
+                    )
+                )
             }
         }
 
-        existingSets
-            .filterNot { it.setId in retainedIds }
+        sortedExistingSets
+            .drop(desiredSets.size)
             .forEach { deleteSet(it) }
-
-        getExerciseDefinitionIdById(exerciseId)?.let { exerciseDefinitionId ->
-            refreshExerciseSummariesByDefinition(exerciseDefinitionId)
-        }
     }
 
     @Delete
